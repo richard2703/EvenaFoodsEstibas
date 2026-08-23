@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tomar Pedido — Evena Foods</title>
+<style>
+  :root {
+    --ev-orange: #FF931E;
+    --ev-orange-text: #B36A1A;
+    --ev-orange-tint: #FFF4E8;
+    --ev-grey: #5F5F5E;
+    --ev-grey-dark: #454544;
+    --ev-grey-muted: #9A9A99;
+    --ev-grey-light: #ECECEC;
+    --ev-grey-border: #DCDCDB;
+    --ev-white: #FFFFFF;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--ev-white);
+    min-height: 100vh;
+    color: var(--ev-grey);
+  }
+  #root { padding: 24px; max-width: 820px; margin: 0 auto; }
+
+  .header-bar {
+    background: var(--ev-white);
+    border: 1px solid var(--ev-grey-border);
+    border-radius: 16px; padding: 22px 28px; margin-bottom: 24px;
+    color: var(--ev-grey); display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  }
+  .header-bar .brand { display: flex; align-items: center; gap: 14px; }
+  .header-bar .brand img { height: 44px; width: auto; display: block; }
+  .header-bar h1 { font-size: 22px; font-weight: 800; }
+  .header-bar p { font-size: 13px; opacity: .7; margin-top: 3px; }
+  .header-badge { background: var(--ev-orange-tint); border: 2px solid var(--ev-orange); border-radius: 12px; padding: 10px 18px; text-align: center; }
+  .header-badge .num { font-size: 26px; font-weight: 800; line-height: 1; color: var(--ev-orange-text); }
+  .header-badge .lbl { font-size: 11px; margin-top: 2px; color: var(--ev-grey-muted); }
+  .header-btn {
+    background: var(--ev-grey-light); border: none; color: var(--ev-grey);
+    border-radius: 10px; padding: 8px 18px; font-weight: 700; font-size: 13px; cursor: pointer;
+  }
+
+  .card { background: var(--ev-white); border: 1px solid var(--ev-grey-border); border-radius: 14px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,.05); margin-bottom: 20px; }
+  .label { display: block; font-size: 12px; font-weight: 600; color: var(--ev-grey-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+  .input {
+    width: 100%; padding: 11px 14px; border: 2px solid var(--ev-grey-border); border-radius: 10px; font-size: 14px;
+    outline: none; transition: border-color .15s; color: var(--ev-grey);
+  }
+  .input:focus { border-color: var(--ev-orange); }
+  .field-group { position: relative; margin-bottom: 12px; }
+  .row { display: flex; gap: 10px; }
+  .row .grow { flex: 1; }
+
+  .dropdown {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--ev-white); border: 2px solid var(--ev-grey-border); border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 100; max-height: 280px; overflow-y: auto;
+  }
+  .dropdown-item {
+    padding: 10px 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--ev-grey-light);
+  }
+  .dropdown-item:last-child { border-bottom: none; }
+  .dropdown-item:hover, .dropdown-item.active { background: var(--ev-orange-tint); }
+  .dropdown-item .nombre { font-size: 13px; font-weight: 500; color: var(--ev-grey); }
+  .dropdown-item .cat { font-size: 11px; color: var(--ev-grey-muted); }
+  .dropdown-item .tipo-chip { font-size: 10px; color: var(--ev-grey); font-weight: 600; background: var(--ev-grey-light); padding: 2px 8px; border-radius: 6px; }
+
+  .btn { border: none; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; padding: 11px 22px; }
+  .btn[disabled] { background: var(--ev-grey-light) !important; color: var(--ev-grey-muted) !important; cursor: not-allowed; }
+  .btn-primary { background: var(--ev-grey); color: #fff; }
+  .btn-dark { background: var(--ev-orange-text); color: #fff; padding: 6px 18px; font-size: 13px; border-radius: 8px; }
+  .btn-outline-danger { background: none; border: 1px solid #fca5a5; color: #ef4444; padding: 6px 14px; font-size: 12px; border-radius: 8px; }
+
+  .empty-state {
+    background: var(--ev-white); border-radius: 14px; padding: 40px 24px; text-align: center;
+    color: var(--ev-grey-muted); border: 2px dashed var(--ev-grey-border);
+  }
+  .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
+  .empty-state .title { font-size: 15px; font-weight: 600; }
+  .empty-state .sub { font-size: 13px; margin-top: 4px; }
+
+  .table-card { background: var(--ev-white); border: 1px solid var(--ev-grey-border); border-radius: 14px; box-shadow: 0 1px 6px rgba(0,0,0,.05); overflow: hidden; }
+  .table-head {
+    display: grid; padding: 10px 16px; background: var(--ev-grey-light); border-bottom: 1px solid var(--ev-grey-border);
+    font-size: 11px; font-weight: 700; color: var(--ev-grey); text-transform: uppercase; letter-spacing: .05em;
+  }
+  .pedido-row {
+    display: grid; grid-template-columns: 1fr 90px 120px 36px; padding: 11px 16px; align-items: center;
+    border-bottom: 1px solid var(--ev-grey-light);
+  }
+  .pedido-row:last-child { border-bottom: none; }
+  .pedido-row .nombre { font-size: 13px; font-weight: 500; color: var(--ev-grey); }
+  .pedido-row .cat { font-size: 11px; color: var(--ev-grey-muted); margin-top: 1px; }
+  .pedido-row .cant { text-align: center; font-weight: 700; font-size: 16px; color: var(--ev-orange-text); }
+  .tipo-chip-cell { text-align: center; }
+  .tipo-chip { font-size: 11px; color: var(--ev-grey); font-weight: 600; background: var(--ev-grey-light); padding: 2px 8px; border-radius: 6px; }
+  .remove-btn { background: none; border: none; cursor: pointer; color: #fca5a5; font-size: 16px; border-radius: 6px; padding: 2px 6px; }
+  .remove-btn:hover { color: #ef4444; }
+
+  .footer-row {
+    display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;
+    background: var(--ev-grey-light); border-top: 2px solid var(--ev-grey-border); gap: 10px; flex-wrap: wrap;
+  }
+  .footer-row .info { font-size: 13px; font-weight: 600; color: var(--ev-grey); }
+  .footer-actions { display: flex; gap: 8px; }
+
+  .pendientes-card { background: var(--ev-orange-tint); border: 2px solid var(--ev-orange); border-radius: 14px; padding: 16px 20px; margin-top: 16px; }
+  .pendientes-title { font-size: 13px; font-weight: 800; color: var(--ev-orange-text); display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+  .pendiente-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,147,30,.3); gap: 10px; flex-wrap: wrap; }
+  .pendiente-row:last-child { border-bottom: none; }
+  .pendiente-row .nombre { font-size: 13px; font-weight: 700; color: var(--ev-grey); }
+  .pendiente-row .sugerencia { font-size: 12px; color: var(--ev-grey-muted); }
+
+  .resumen-head, .resumen-row, .resumen-total {
+    grid-template-columns: 2fr 90px 110px 65px 110px 110px 120px; gap: 8px; align-items: center;
+  }
+  .resumen-head { display: grid; background: var(--ev-grey); color: #fff; padding: 12px 16px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .resumen-row { display: grid; padding: 14px 16px; border-bottom: 1px solid var(--ev-grey-light); }
+  .resumen-row:last-child { border-bottom: none; }
+  .resumen-total { display: grid; padding: 13px 16px; background: var(--ev-grey); color: #fff; }
+  .center { text-align: center; }
+  .tipo-name { font-weight: 700; font-size: 14px; color: var(--ev-grey); }
+  .orden-pill { display: inline-block; background: var(--ev-orange-text); color: #fff; border-radius: 50%; width: 28px; height: 28px; line-height: 28px; font-size: 13px; font-weight: 800; }
+  .pill { display: inline-block; border-radius: 8px; padding: 3px 14px; font-weight: 800; font-size: 16px; }
+  .pill-green { background: #dcfce7; color: #15803d; }
+  .pill-amber { background: #fef3c7; color: #b45309; }
+  .pill-grey { background: var(--ev-grey-light); color: var(--ev-grey-muted); }
+
+  .section-title { font-size: 14px; font-weight: 700; color: var(--ev-grey-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: .05em; }
+
+  .tarima-card { display: flex; align-items: stretch; background: var(--ev-white); border: 1px solid var(--ev-grey-border); border-radius: 14px; margin-bottom: 16px; box-shadow: 0 1px 6px rgba(0,0,0,.06); overflow: hidden; }
+  .tarima-body { flex: 1; min-width: 0; }
+  .tarima-header { background: var(--ev-grey); color: #fff; padding: 10px 18px; display: flex; justify-content: space-between; align-items: center; }
+  .tarima-header .num { font-weight: 800; font-size: 15px; }
+  .tarima-header .meta { font-size: 12px; opacity: .8; }
+
+  .tarima-alert { width: 78px; min-width: 78px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px 6px; color: #fff; text-align: center; }
+  .tarima-alert-danger { background: #DC2626; }
+  .tarima-alert-warn { background: var(--ev-orange); }
+  .tarima-alert-icon { font-size: 22px; line-height: 1; }
+  .tarima-alert-item { display: flex; flex-direction: column; gap: 1px; }
+  .tarima-alert-item .lbl { font-size: 10px; font-weight: 800; letter-spacing: .05em; }
+  .tarima-alert-item .sub { font-size: 9px; font-weight: 600; opacity: .9; white-space: nowrap; }
+
+  .cama-row { display: flex; align-items: stretch; border-bottom: 1px solid var(--ev-grey-light); cursor: grab; transition: opacity .15s, box-shadow .1s; user-select: none; }
+  .cama-row:last-child { border-bottom: none; }
+  .cama-row.dragging { opacity: .35; }
+  .cama-row.drop-target { box-shadow: inset 0 3px 0 var(--ev-orange); background: var(--ev-orange-tint); }
+  .drag-handle { width: 22px; min-width: 22px; display: flex; align-items: center; justify-content: center; color: var(--ev-grey-muted); font-size: 16px; cursor: grab; }
+  .drop-nueva-tarima {
+    border: 2px dashed var(--ev-grey-border); border-radius: 14px; padding: 22px;
+    text-align: center; color: var(--ev-grey-muted); font-size: 13px; font-weight: 700;
+    margin-top: 16px; transition: border-color .15s, background .15s, color .15s;
+    letter-spacing: .03em;
+  }
+  .drop-nueva-tarima.drop-target {
+    border-color: var(--ev-orange); background: var(--ev-orange-tint); color: var(--ev-orange-text);
+  }
+  .cama-label {
+    width: 68px; min-width: 68px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; border-right: 2px solid var(--ev-grey-light); padding: 8px 4px; gap: 2px;
+  }
+  .cama-label .txt { font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+  .cama-content { flex: 1; padding: 10px 16px; }
+  .cama-pura { display: flex; justify-content: space-between; align-items: center; }
+  .cama-pura .nombre { font-weight: 600; font-size: 14px; }
+  .cama-pura .cajas { border-radius: 8px; padding: 3px 12px; font-weight: 700; font-size: 14px; border: 1px solid; }
+
+  .mixta-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .mixta-head .lbl { font-weight: 700; font-size: 13px; color: var(--ev-orange-text); }
+  .mixta-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .mixta-bar-track { width: 100px; height: 8px; background: var(--ev-grey-light); border-radius: 4px; overflow: hidden; }
+  .mixta-bar-fill { height: 100%; border-radius: 4px; }
+  .mixta-bar-text { font-size: 11px; font-weight: 700; color: var(--ev-grey); white-space: nowrap; }
+  .mixta-items { display: flex; flex-wrap: wrap; gap: 6px; }
+  .mixta-chip { border-radius: 999px; padding: 3px 6px 3px 10px; font-size: 12px; font-weight: 600; border: 1px solid; display: inline-flex; align-items: center; gap: 4px; cursor: grab; user-select: none; }
+  .mixta-chip.chip-dragging { opacity: .35; }
+  .cama-row.chip-drop-ok { outline: 2px dashed var(--ev-orange); outline-offset: -3px; }
+  .mixta-chip .esp { opacity: .6; }
+  .chip-btn { background: none; border: none; cursor: pointer; font-size: 14px; font-weight: 800; line-height: 1; padding: 0 2px; border-radius: 4px; opacity: .55; }
+  .chip-btn:hover { opacity: 1; background: rgba(0,0,0,.08); }
+
+  .detalle-row {
+    display: grid; grid-template-columns: 1fr 80px 110px; padding: 11px 16px; align-items: center;
+    border-bottom: 1px solid var(--ev-grey-light);
+  }
+  .detalle-row:last-child { border-bottom: none; }
+  .detalle-row .nombre { font-size: 13px; font-weight: 500; }
+  .detalle-row .cat { font-size: 11px; color: var(--ev-grey-muted); margin-top: 1px; }
+  .detalle-row .cant { text-align: center; font-weight: 700; color: var(--ev-orange-text); }
+  .detalle-row .tipo { text-align: right; font-size: 11px; color: var(--ev-grey-muted); font-weight: 600; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+  (function () {
+    "use strict";
+
+    var LOGO_DATA_URI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA94AAAKeCAYAAABTQsPzAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAHh3SURBVHhe7d1/tF1Vfe/9dfKbnPwSc8ALksN4ahwmj95eIVT6SKDjAhfFyx8kjHEvP6SkrQjtaETtECXRp1cDFW6tSJ8WpNVQJPj0GST0FkUp0Ft+eEUJtoojhyF6BydKCpwUTUJCcpKQZ3/WmSvZOTlnr7X2nnOuOdd6v8bY4+y1UThn77XXXJ/5nT/6ThkcPDQ6Opq8tG1bAgAAAAAA7JpifgIAAAAAAAcI3gAAAAAAOETwBgAAAADAIYI3AAAAAAAOEbwBAAAAAHCI4A0AAAAAgEMEbwAAAAAAHCJ4AwAAAADgEMEbAAAAAACHCN4AAAAAADhE8AYAAAAAwCGCNwAAAAAADvWdMjh4aHR0NHlp2zbzEgAAQHPsf2UoObR3pzma3IxF7zHPAAAoh+ANAABqIQvQB3f8ovV4MX1tdOtT6c+MXj+4c+yf9WrqvJOTqfNPNkdjZiw6M/2p16fOf2vSN2teMv2EJelrAIDmIngDAIAoZIF6/ytb0p8HXt6SvLFvV3KgFbhjMOOU30h/TjtxaTJl5ry0gp4FdABAvRG8AQBAUBSwVb0+8PJQGrJVxR79+ffNP60nhXIFcD2mnbgk/UmlHADqg+ANAAAq88a+nWnAHt36vXRYeDpcfN8u80+brW/m3LQqPvY4kyAOABEjeAMAAG8UrBWwFbQVuG3Nt24CBXGFb4XwLJADAOJA8AYAAM60B209qGbbddw7VyQz335+Mmvx+eYVAECICN4AAMAazc/OQrYeVLT9UDVc4Xv2GasYkg4AASJ4AwCAnmRV7def3RTNCuN1pm3OVAXvX3YVK6YDQCAI3gAAoDRVs/c+/3Cy7ycPB1vVzrbvkmx/bSk7NzpbAC4zdrwlfW5zX3AX9B7MOesjzAcHgIoRvAEAQCFZ0NbPEOZqq7KrfbC1L7Z+Tj9haboVl/bI9i1djX3vztZPbX+2Kx0BENIe49NOWJJWwI9710rzCgDAJ4I3AACYlALl689uTB9Vhe321byzYB1TBVejAxTI9bPqldzVWTHnrNUEcADwjOANAACOogXSdm++q7Jh5AqHCtYK2XXcv1pD1bMQnq74/vPvm3/iDwEcAPwieAMAgDQMKmgrcPseHq15yBourrCtRxVDxauUvffZvHmfIwsUwOeet5btyADAMYI3AAANpqHke55e7y3wadi4wrXmY2dBG0erYuE6dX7M/8AtrIIOAI4QvAEAaBif1W0t6jU2P3ssZBPsyvE5x16dIv3LVqVD0AEAdhG8AQBoCB/VbYU3DVtWyNZe0k0bNu5SFsBdzwnX8HNVvxmNAAD2ELwBAKg5DV1+7ckvOQtsGqaskF3HhdBCpMXvXn92UxrCXQ5Fn7n4vDSA03kCAL0jeAMAUFMKZq89eZv1cJatOj4Wtpu3GFpIXH3GGY1geNOKO6h+A0CPCN4AANSI5m/vefquZPfm9VaHk1PVDpvrYehz3ruaud8A0AOCNwAANaDhx6p8vv7jTeaV3lDVjpPLaQXqfFmw8g7OBQDoAsEbAICI2QzcmtOrkE1VO36uAjhDzwGgOwRvAAAiZCNwZyuQU9WuLw0/3/noOuur2DP0HADKIXgDABCRXgO3hpAraGdbfqH+snn/r33nNvOKHax6DgDFEbwBAIhAL4E7WxhNYXvq/LeaV9E0Ood2fPMTVoefTzthSXL8ZRsI3wCQg+ANAEDAVK1U4N6z+S7zSj4NIVc1OxtGTihCu73PP5wGcFvDzxW+VflmXQAAmBzBGwCAQGlLMIXuIgEpG0KeBW6gE3XoKHzve/4R80pv1Nlz/GX3Er4BYBIEbwAAAqOK5K5H1iUHd75oXpmYKo3HvWtFK2yzCjm6Y3PxNVY8B4DJEbwBAAhEkS2gtKBVtjAa87Vhg+Z+/3LTtcmBV4bMK72Zf+HNyXHvWmmOAABC8AYAoGKdFk7TEHKF7GxxNMAVnYO2Vj4nfAPA0QjeAABUJNvmSXO524f6agi5wraCC0PI4ZNGXfxy0zVWhp4TvgHgCII3AAAVGD+3VkPIs4XRGEKOKu1/ZShdeM3G0HPCNwCMIXgDAOCRKooKNap2Z9t9KXCz5RdCovPzVxuvsbLn9/GXbkjPcQBoMoI3AAAeZPO4+2bNO7w4GhA6dRJNtPZAGWw1BgAEbwAAAHSgaRE7HrzeHHWH8A2g6aaYnwAAAMAxNEdbc7V7obUMXr33snT+OAA0EcEbAAAAHdkK35o3rvnjANA0BG8AAADkshG+D+58MQ3fANA0BG8AAAAUYiN8a6V0LdoGAE1C8AYAAEBhNsK3VkrXom0A0BQEbwAAAJRiI3xrpXQWWwPQFARvAAAAlGYjfGulc+1xDwB1R/AGAABAVxS+57x3tTkqTyud/3LTtax0DqD2CN4AAADo2pyzVifHvXOFOSrvwCtDyWtP3maOAKCeCN4AAADoydzz1ibTTlhijsrbs/muZHTr98wRANQPwRsAAAA9mTJzXnL8ZRuSvplzzSvlaYsxhpwDqCuCNwAAAHo2Fr7v7Tp8H9z5IkPOAdQWwRsAAABWTD9hSTLv3LXmqDwNOd/7/MPmCADqg+ANAAAAa7TS+czF55mj8hhyDqCOCN4AAACwav4Hbul6yLm2GFP4BoA6IXgDAADAKs33ftOKO8xRefuef4Qh5wBqheANAAAA62Ysek8ye9lV5qi8XY+sM88AIH4EbwAAADgx56zVXe/vrVXOX392ozkCgLgRvAEAAOCEhpxrvne3dj66joXWANQCwRsAAADOaIuxOe9dbY7K0UJre56+yxwBQLwI3gAAAHBq9hlXdb3K+e7N66l6A4gewRsAAABOacj5vHPXmqNyqHoDqAOCNwAAAJw77l0ru15ojao3gNgRvAEAAOBFL1VvthcDEDOCNwAAALzQ3t7HvXOFOSpn7/MPU/UGEC2CNwAAALzR3t7dLLSmqve+nzxsjgAgLgRvAAAAeDN1/luTWYvPN0fl7N7MImsA4kTwBgAAgFeqenfjwCtDyf7WAwBiQ/AGAACAV6p6z1x8njkq5/VnN5pnABAPgjcAAAC861+2yjwrh+ANIEYEbwAAAHinFc672ddbi6wRvgHEhuANAACASvQvu8o8K4fgDSA2BG8AAABU4rh3rexqa7HRn3+fPb0BRIXgDQAAgMp0O9d7dOv3zDMACB/BGwAAAJWZfUZ3w80J3gBiQvAGAABAZabMnNfVImsEbwAxIXgDAACgUlrhvKwDrwwlB3f8whwBQNgI3gAAAKjUrMXnm2flUPUGEAuCNwA0iFYB3v/KkDkCgDCo4t3V6uYEbwCRIHgDQE3phnT35vXJzkfXJa/ee1kycvs5ya5H1iVTuri5BQDXuhluTvAGEIu+UwYHD42OjiYvbdtmXgIAxERVbN18Hnh5qPXzqeTgjheTgztfNP+0daFvBW1t16OVg7WIEQCE6PVnNyY7HrzeHBV3wnU/4NoGIHgEbwCIkIL22OOpZPTn3zevHm3qvJPTsH3cu1ZyUwogeFoobeSO3zJHxR1/6YauquUA4BPBGwAioHnZachuhe19zz9iXp2YAvecs1angRsAYqIpMe0jdoqYf+HNXO8ABI/gDQCBUvXn9Wc3pcMvi9yIzjjlN5LZZ6zqenVgAKia1qOYbBTPZOa8d3Xa2QgAIWNxNQAIiOZrK2ini6Hd8VvJa9+5LTd0K3BrqOXxl91L6AYQtWknLjXPitv/yhbzDADCRfAGgADsff7hZMc3P5G8cutp6eJCRSo+x71zRTJwzT+lgZv5jQDqoJv1KA7t3WmeAUC4CN4AUCFVtzWn8Vebrk1e//Em8+rktEL57GVXpYF7/gduSabOf6v5JwAQv2knLjHPitMaGAAQOoI3AHim4eSvPXlb8vKt706r20Xmbytwax7jwLWPJfPOXUvgBlBLXVW89+0yzwAgXARvAPAkC9yqcGvudpGbxfbArcWD2BYMQJ1NnX+yeVaOdnwAgJARvAHAMQI3ABTDaB4AdUXwBgCHtGgagRsAitN1EADqhuANAA5oD+5fbromXTSt6PzDdJVyAjcAAEDtELwBwLLdm9cn29dflOx7/hHzSmfah/vNqx5IVykncANoOhZLA1BHBG8AsERb2rx672XJrkdvLHTjOHXeycnxl25I9+GefkL5LXQAAAAQB4I3AFigxdP+bf1FyejPv29emZzmL849d006rHzGoveYVwEAAFBXBG8A6IFWLN/xzU+ki6cVoWHlCtz9y1aZVwAAAFB3BG8A6JIWUHv13suT13+8ybzSmarcGlbOPG4AmJg6MwGgjgjeANAFzefWAmoHWj/zTDthSbp4GlVuAOjswMv511QAiBHBGwBKev3Zjel87iILqM1edlWysBW6WTwNAACguQjeAFCC5nPvePB6czQ5LaCmFcvnnbvWvAIAyKMpPN2YdiKdmwDCRvAGgIIUuovM59bQcs3lZsVyAChndOv3zLNyWDsDQOgI3gBQwO7N60uE7g0MLQeALmj9jLI0wggAQkfwBoAcmtO969EbzdHkstBN5QUAulNkwcrx6OgEEAOCNwB0oNBdZE43oRsAetPtMHMAiAHBGwAmQegGAH/2v7LFPCtn2olLzTMACBfBGwAmoHmGRUL31HknE7oBwIJu9/Dm+gsgBgRvABjnjX07k19tvMYcTU4L+ixYeQc3fQBgQbdDzdlBAkAMCN4AMM6uR9YlB3e+aI4mN/8Dt7CoDwBYoFFGRa67EyF4A4gBwRsA2ux9/uFC24bNXnZVMmvx+eYIANCLPU+vN8/K0RobABADgjcAGAd3/CLZ8c1PmKPJaV73nLNWmyMAQK/U6dkNqt0AYkHwBgDjl5uuTQ7t22WOJqch5szrBgA7tINEkWvvRJjuAyAWBG8AaNm9eX1y4JX8FXWPe+cKKiwAYFG31W7hegwgFgRvAI2nVcxfe/I2c9TZ7DNWmWcAgF5pis++5x8xR+VoZ4mp899qjgAgbARvAI235+m7Cg1znHHKbzCsEQAs6qXazQKXAGJC8AbQaKp2a5h5EXPO+oh5BgCwQR2f3Zr5doI3gHgQvAE0WplqN3MJAcAedXp2u3e3hplT8QYQE4I3gMbS3MLXvlNsbjfVbgCu6Fo0uvV7Ez72F1j0MUZl1taYCKEbQGz6ThkcPDQ6Opq8tG2beQkAmkF7dr/+403maHLTTliSLFz1gDkCgGIUmg/t3ZkGaBnd+lT6U0Z//n3zrDyNwJG+WfOS6ScsTabOPzmZduLSqNagUOgu2vE5kQUrbid8A4gKwRtAY71867sLDTOfveyqZN65a80RABxN1dsDLw+ZCvWW9Ge3+1L3Yuq8k9MpMZr7HHIoVYV/+/qLun6P9HcOXPuYOQKAOBC8ATTS689uTHY8eL056ozKCoB2qmQfeHksYKfPKxgOnlW9Jat8t1P4DrUCXnS00WToDAUQI4I3gEb65aZrCu8d+5brf2qeAWgibXk1VtF+amz4uIdqtqa4TJk5N5mx6Mz0OFvcMfZFHlXtHrnjt8xRd9686gG2dgQQHYI3gMbRsNBXbj3NHHWmqtLxl91rjgA0ga4R+37ycBq4fQwb13Umm6Md21ztsl6997Ke57dzTQYQI4I3gMYpM8x87rlrkv5lq8wRgLpqD9tFR8N0Q/OTNQxcleup89/aqMptmWvvZOZfeHNy3LtWmiMAiAfBG0DjaFGfonMyGdII1JeGPStov/7sJmfztLMFz7KHwnYT9bqgmrCoGoCYEbwBNErZ+YXM7wbqRZVtVV5dhu2Zi89LF2RsctAer0yH52SodgOIGcEbQKOouvWrTdeao3wEb6AeNFc7Ddw9rKY9mb6Zc9OgHfo2XlXpdc9uodoNIHYEbwCNUuYGUKsKL1z1gDkCEJusur3n6buSgztfNK/akc3VzirbmJg6PF79+uXmqHtUuwHEjuANoFHKrKjL6rlAnMbmbW+0vkgale1y1PHxb1+9qOdOD6rdAOpgivkJAI2gPXgB1I/Wb9CIlpHbz0mnk9gM3eqEU8VV4W/+B24hdBe045ufsDLSYM5Zq80zAIgXwRtAY+jGvMyKujMWnWmeAQiVvtcKeFo0UdNIbA0pV3V7zntXJwPX/FM68kXDnKfMnGf+KfLs3rzeSueHOj0YYg6gDgjeABqDajdQH+nc4XsvSwO3zQXTNKxZ1e0Tr/vntNLKquTlaZj/rkdvNEe90QgDAKgDgjeAxjjwMsEbiJ1Cnbam0oJdRddrKEJbgB1/6YZ0ODkV1u6pg3Pno+vMUW804oCODwB1QfAG0BgakgogPlqkK5u/vePB663tv63h5Me9c0U6nPxNK+5gdfIe6RqrUQhlpvRMRrtKMLcbQJ0QvAE0RtngTVAHqqXvoKqnCtw2529rOPncc9ccXiyNqmrv1Dnyy03XWgndMu/cteYZANQDwRsAJkHwBqqh7162YNqezXdZC3Ptq5P3L1vFYmkW6fOyNRJh9rKrGH0AoHYI3gAAIAjtgdvmgmkaTq7529nq5LBLn5mt7ds0GoEh5gDqiOANAAAqpQW5XARuVbjfvOqBdDg5FVQ39LnZ/MwWrLyDkQgAaqnvlMHBQ6Ojo8lL27aZlwCgnl66+W3mWXFvuf6n5hkA27Ql2GtPfsnq6uSiwD3nrI8Qth2zHbo1DYARCQDqioo3AADwKtuD2/aWYArc2ZByQrdbtkO35nUTugHUGcEbADpggTXAHgJ3PdgO3fr8WMUcQN0RvAGgAwUFAL15/dmNTgK3FuLS8GQCtz+2Q7c+Q83rBoC6I3gDaAxVVcrSok8AuqPArT24dzx4vZPArW3BGJ7sj+3Q3TdzLoupAWgMgjcAdHDg5S3mGYCi2gP3wZ0vmld7R+Cuxhv7dloP3aLV5qefsMQcAUC9EbwBoAPbqy0DdeYqcKsyOue9q5M3/84DBG7PFLpfvfdy+6H7wpuTWYvPN0cAUH8EbwCNMWPRmeZZOQw3ByanYLZ783ongVuOe+eKZOGqB5I5Z61mSLJnuvbpcz1g+RrItmEAmojgDQA5GG4OHEuB+7Unb0uD2a5Hb7QeuLOVyjUceer8t5pX4Uu2IN6hfbvMK3YQugE0FcEbAHKwsjlwRHvgfu07t1kPZqxUXj19vhq9QOgGAHsI3gAao9ubeII34D5wM4+7egd3/CKtcuvztY3QDaDp+k4ZHDw0OjqavLRtm3kJAOpJweGVW08zR+W8edUDrL6LRtL3Zs/Td6XzuG2H7YzmcWsON0PKq6NOFReBWwjdAEDFG0CDaGEmDWPtxujWp8wzoBlcV7iFedzV04ie7DO2TaMY1GlJ6AYAgjeAhpl2YndV69eftbuVDhAqH4GbedzV0+esvblf/frl1hfGk2knLEn3W2ekEACMIXgDaJRub/K1nY7mPwJ15SNwC/O4q6XPOdv+zfbe3JlsCzi2fwOAI5jjDaBRNKxSFZ5uzD13TdK/bJU5AupBQcz1HG7RsHKGlFfH1+fMfG4AmBjBG0DjvHTz28yzctL5qJfda46AuPkKYhpWPve8tcmsxeebV+DT/leGWp/z+mTv8w87/5wXrLyDoeUAMAmCN4DG2b7+onToeDdOuO4HDJ9E1HwFbi2spREiWq3cJwXNQ3t3mqNj7X9lS+ufH/t3j70++f8vz4xFZ5pnR6a0aE2JKq4Xeg+0IKQ+Zxfzt8dTp6RCN9dGAJgcwRtA4+x8dF2yZ/Nd5qgchpsjVlqjQHO4XVc+Zebi85J55661PqxcU0X0+x94eUsy+vPvm1fDpg4IVYGnnbi09X6c3Hq+1Hog12ersL3vJw+n75GPsC3p3utnreaaCAAFELwBNI5uUP9t/UXmqBwNp9RKvUAsssDtaiGtdulq5R+4xdtK5foupyG8FTbT561HLNoDuUJ43ywdLzX/dHL6PA/ueDEduVBlB4Q6V/RZU+UGgGII3gAaSSv6dlsVWrDiduarIng+A3dVw8onMhbCt7RCqYZb+6v+NgVz9gGgOwRvAI2kQKItk7qhSs+bVtxhjoCw+Azcoq2jFMRCrXyOVYbHQrgCuX66HmpfV7OXXZV2rlDlBoDyCN4AGknhZOSO3zJH5Q1c809si4Sg+A7c005Yks7j9jWs3Ca9V2PD1McWIdNzwvjkYv6sASAUBG8AjdXL6uZz3rs6iGG1gO/AXdcFtbL54vqpqnhM88Vd0bByfdbsyw0AvSN4A2gsbae069EbzVE5Ch8nXvfP5gjwz3fgltCHldumAN7EIeoEbgCwj+ANoLF6HW7O1mKoQhWBW/s0zz3v0+kq3E2m934siNezKk7gBgB3CN4AGu2Xm65J9j3/iDkqR1VvbS3GQkPwoYrArXNcc3sJYhPTwm1ZVTzmIE7gBgD3CN4AGk03y69+/XJzVB5zveFaFYFbWMG6vPYgvu8nDwe/lRmBGwD8IXgDaLxX770sGf35981ROVS94UpVgZth5fZkQ9P18P05dkLgBgD/CN4AGo+qN0JSVeBWGNPCabMWn29egU1Vfa7t1FGodSm4XgGAfwRvAGih6o2qVRXMsjA2+4yrOIc90MJsv9p4jfdh6E1bkR4AQkPwBoCWXqvemg+rRaiAsqqshM5cfF563k6d/1bzCnzQXPBX773cy2Js6liZ/4FbGMkAABUjeAOAMXL7OT1VoY6/dEMyY9F7zBHQWZWBe9oJS9LAzflarR3f/ITTz18dKwrdVLkBoHpTzE8AaLxe5z3qJhrIo8Ctc0V7yFcxrFz7zy9c9QChOwAa+q1OEBc0tPxNK+4gdANAIAjeAGBohV8tMNUtVctVwQQmUmXgFk2H0FoEms+NMCgUqyKtDhGbFLr17wUAhIOh5gDQpte53vLmVQ+wFRMOq3JIuWh7MIUw5nGH6/VnNyY7HrzeHPVm/oU3s00YAASIijcAtNHwW1UGe8GQc4g6caqscGv0xoIVtyfHX3YvoTtwvY62yWhrQ0I3AISJ4A0A42iudy9DP7VS8e7N680RmiYdNXHvZenIiSoCt85dBTANK2cl63jMfHtvn5XmirM/NwCEi+ANAONk8y57sevRG9MAhuZoD9zd7gnfK83tVeAmgMWnl0XQ1NnyphW3myMAQIgI3gAwAVUKFWJ68ctN16Tze1Fvmp9bdeDWPG5tZ8fWUc3EXuwAED6CNwBMotetfg7t29UK39cmb+zbaV5BnShwa+93LYpVVeDWvGAtpqV53GwP1kw6B5jXDQDhI3gDwCRUOdTwzV7ne+96ZJ05Qh20B25tIVeF9nnchK5mY1oBAMSB4A0AHWj4Zq/zvbXAlsIa4qVRC9oSrOrALczjRoZqNwDEg+ANADk031vVxV4orBG+46M5+umWYK3A/dp3bqs0cGse98A1/8Q8bhw2+4zetj4EAPhD8AaAAlRd7HWxNcJ3PMbvwa35+lVRVVMLp7Efd731zSo/pYXt4gAgHgRvAChIlUYb4Xv/K0PmCKHZ+/zDle7B3U7zuLVwmoaVs3Ba/U0/Yal5Vow6ZOiIAYB4ELwBoASF75mLzzNH3VGwI3yHJVsw7Vebrq1shfIMC6ehCDpjACAuBG8AKEnhu9dtxgjf1csWTHv51ndXvmBaRiMqFq56IJ3awDxudDLz7QwzB4CYELwBoCQFouMv22AlfGtoM/wav2BalfO3M1o4TfO41anD8GEUMb2H6w8AwD+CNwB0wVb41tDm3ZvXm1fgUjZ/O4QF0zKap7tgxe3pwmkMHUYZdNAAQFwI3gDQJRvhW3Y9emNagYV97ftvhzB/O6PAnS2cxsrUAADUH8EbAHqg8K05ub2udq4K7Pb1F6VBEb3LtgN75dbTKt9/u1174GbhNHRLUxMAAHEheAOABTa2GjvwylDyb1+9KA2N6I5WJ1cHRgjbgbUjcAMA0GwEbwCwxEb4VmVWoXHno+uofhekxdL0fmWrk6sDIxQEbgAAIARvALBI4Xv2sqvMUff2bL6L6ncOLZb2y03XpIul6f0KYbG0DIEbAAC0I3gDgGXzzl2bhq5eUf0+VlbdzhZL2/f8I+afhKFv5txkzntXJ2/+nQcI3AAA4DCCNwA4oNBlI3xLVv3W/OUmUqdDNnc7q26HslhaJgvcqnDPOWt1uugeAABApu+UwcFDo6OjyUvbtpmXAAC2KDBq3rEtGsKsYNeEaqqGku/7ycNBLZI2ngJ3/7JVyewzriJsoyeaVqIRLkVoVXPt/Q4AiAfBGwAc0w215iLbnIOsvcM1pH3GoveYV+pBQ8l3b74rDdyhVbXbEbhhW5ngrQ44ja4AAMSD4A0AHux/ZSh59d7LrC8ApgDev+yqZObbz482AGoouYK2AndIK5JPpEkjDuBXmeAtb7n+p+YZACAGBG8A8MRV+M5oKzMFwhiq4KpsK2ikw8kDWyBtIhraO+esj9RuhAHCQfAGgHojeAOAR67Dt6gqqyHQMxadmUw/YYl5tXr621XZVtgOvbKdUWfG7DNWBfU+op7KBu+Ba/4pmTr/reYIABA6gjcAeOYjfGc0F1lV2rGH3yCuIJFVttPnAc/ZbqeOC40cOO5dKwg28KZs8D7+0g2MwACAiBC8AaACPsN3O4XKqfNPTkN436y5rSC+ND3uJWAqXB/c8eLhoK2/LZaKdruZi89LA/esxeebVwB/CN4AUG8EbwCoSFXhezJaqG3KzLnm6AiFdBkL2L8wz1+MpoLdCdVthKJs8F6w4nY6iQAgIgRvAKiQwve/rb/IHMEXqtsI0Us3v808yzfnvavTFfYBAHGYYn4CACqgOdfzL7zZHMElVfTnnrsmXZTqTSvuIHQDAABvCN4AUDFVXgnfbrSH7YWrHkj6l61iSDlqQfvfAwDiQfAGgACk84zfucIcoReEbTTBgZe3mGcAgBgQvAEgEPM/cEsy45TfMEcoSlumqdNCowYI2wAAIEQsrgYAAdHw0X/76kW1WDHcJXVQzHz7+d73JgdcKrO4mkZ2qJMJABAHgjcABIaVzo+mirbCtUK29i1m72LUVZngLW+5/qfmGQAgdARvAAjQa0/elrz2ndvMUbOomq2QPe3EJWngZsg4moLgDQD1RfAGgEBtX39RcuCVIXNUTxouqwq2Ava0E5cybByNVjZ4v3nVA3xnACASBG8ACFTdhpwrZI8FbP1cypBxYJyywfv4SzfwPQKASBC8ASBgO775ieT1H28yR3Fon5M9df7J6VBxwgGQr2zw1kr+2ooQABA+gjcABOzgjl8kI3f8ljkKSxawNURcAVtVbFWzp8ycZ/4XAMooG7znvHd1Mues1eYIABAygjcABC6EqrcWPFPlOqteE7AB+wjeAFBfBG8ACJzPud5T5518eA42q4oDfpUN3uoQO/6ye80RACBkBG8AiMDLt747ObRvlzmyQzft7cPEmYcNVIvgDQD1RfAGgAj8ctM1yb7nHzFH5VDFBuJQNnjruz1w7WPmCAAQMoI3AERg9+b1ya5HbzRHnelmfPYZV1HFBiJTNnjLW67/qXkGAAjZFPMTABAwheiiNHS8f9kqQjfQAG/s22meAQBCRvAGgAj0zWIFcQDHOvDykHkGAAgZwRsAIqB52QAwnvb6BwCEj+ANAAAQqYM7XjTPAAAhI3gDAABEav8rW8wzAEDICN4AAACROrSXxdUAIAYEbwCIRN/MueYZAIwZ/fn3zTMAQMgI3gAQCRZYAzARthQDgPARvAEAACLGlmIAED6CNwAAQMTYUgwAwkfwBgAAiBhbigFA+AjeAAAAEWNLMQAIH8EbACIx7cSl5hkAHMGWYgAQPoI3AERiysx55hkAHMGWYgAQPoI3AABA5Pa/wsrmABAygjcAAEDkDrzMPG8ACFnfKYODh0ZHR5OXtm0zLwEAQvTak7clr33nNnM0uRmn/EZy/GX3miMUpS2Z2leHfmPfzmP2Rx7d+pR51lnRob9T552cTJ1/sjk6mub0TzS9oG/W3GT6CUfm+087cQnTEGripZvfZp6VN3vZVcm8c9eaIwBAaAjeABAJgnd3NARXi09lwXosUI9VB+s2N7Y9yPfNmndUQJ+x6D3pz7HXl6TPEZZegjffewAIG8EbACJB8J7Y6NbvHVWdzqrSaeDetyt9jonpXJGsuq7QPnX+WwnnFekleMtbrv+peQYACA3BGwAi0fTgrSCtqrUCtsK1qtcHdx4ZGg43xodzVc6zgA67eg3eb171AB0mABAogjcARKIpwTsbEq5K9v5XtqTPD7Bic5CmtULelJlzW2H8zMNhnDnn3es1eM+/8ObkuHetNEcAgJAQvAEgEnUM3grZYwF7KJ13zX7E9dDXCuOqvCqIZ2FcP6nGdtZr8D7unSuS+R+4xRwBAEJC8AaASNQheGdBO3swVLx5sgXgNHRdP7UAHEPXx/QavDUCYeGqB8wRACAkBG8AiESMwVuVbM3HHpuXTdBGZzp3s9XYszCercbeBL0Gb2GBNQAIE8EbACIRQ/DOgnZW0WZVcdigKrmGqyuQ13lxNxvB+/hLNzSqswIAYkHwBoBIhBq89z7/cLLvJw+nP+sYtNv3xm6nBcVsaN9XfLw3Wu8nC8tNLJtHni3spqHrsc8htxG85567JulftsocAQBCQfAGgEiEErwVFLOgve/5R8yrcchW4Va1tL1i2r4Sd8h7WGsUQUYrvh/aO9bRMbYS/C/M82Zvs6bzX59tViGPaZV1G8GbBdYAIEwEbwCIRJXBW6FOQVvBL+Swrb89/Wmq0Vnoiil82TIWxl80FfWhw5X1JlbR24eqj/0cW2U9NDaCt+8RLwCAYgjeABAJ38E7m6/9+rObggpqWUVTD81lDblCHbKjA/mQCeq/aMyWbtlQ9WyIeghD1W0Eb2GBNQAID8EbACLhI3grbL/+7MZ0KHnVw5XHB2y2nPInq5anK9G3nqf7rDekSq7pCGNB/Mhibr7YCt5vXvVA5Z0IAICjEbwBIBI7vvmJ5PUfbzJHkysbvFXxVNiuqrKtYcBjwZqAHToFcAVxVcg1x1zhvAmB3FcYtxW8F6y4PZm1+HxzBAAIAcEbACLx6r2XFRoGXDR4q5qZBu4CYd6W9pWoFWIUYJo297pusqHqOp8UxvWzCdvIuQjjtoL3nPeuTuactdocAQBCQPAGgEjYCN5ZdXvP03d5GUqehROFkjps94Ri0rniaRAfC+QMUy/GVvCeufi85E0r7jBHAIAQELwBIBK9BG+tSJ7O3Xa8Irlu+LPAYaMCiPpor4ini7k1ZMuzMmHcVvAuO90EAOAewRsAIlE2eKvqqHnbCtyuQo5CheaSErRRls7PbIs6PZowPD0zWRgneANAfRG8ASASRYN3tmexi+q2/t0z334kaDM/G7Zk29dpRf0i53ndKIzbGpJP8AaA8BC8ASASRYO3TVoMrb2izWrj8EVV8Kwi3pQ54rYQvAEgPARvAIiEr+Ctyttx71rRCtpnpsNhgappUUAFcFXDFcabNCy9G8e9c0Uy/wO3mCMAQAgI3gAQCZfBOwvbqm5T1UboNCw9XSywFcSbskhbGfMvvLn1fV5pjgAAISB4A0AkbAdvrUCuoK0528zVRqyyRdq0kCBD0scMXPNPdKABQGAI3gAQiV6Dd/t8bcI26ijbP1xB3PXWeaHS9/zE6/7ZHAEAQkHwBoBIdBO8s7CtoK2fQFNoXni6QroJ4k2ZF878bgAIE8EbACJRJnhnw8iZ5wmM0ZzwulfC1dG2cNUDDDMHgAARvAEgEnnBmwXSgHxZJXz35rtqNyd8zntXJ3POWm2OAAAhIXgDQCQmCt6qcKmqrQdbfwHlZAuz7Xn6ruhXR5867+Rk4NrHzBEAIDQEbwCIRHvw1jxO5m0D9sS8RZlGuxx/2QYWTASAgBG8ASASOx9dl1a1WZEccEdV8NeevC15/cebzCthI3QDQBwI3gAAoJFU5T7w8pajfsa0+rkWUdQK5oRuAAgfwRsAANSethXb/8qWVsAeGtvvu+TWfCFRlXveuWvTPfkBAHEgeAMAgNrQquUK10cF7cgXTssocPcvu4ptAgEgQgRvAAAQnXRY+N6dabg+tHdXK2g/Fd1Q8SK0c4EWUZx9xip2LgCAiBG8AQBAcMYH67GfOq5fuB5PW4NpEUUNJWfnAgCoB4I3AADwTvOsD+54cdzPXzQiWI+noK2QnT2mzn+r+ScAgLogeAMAgJ5lAVqyedYZDQPPNDFYt1PInnbikmT6CUvTkK3nrEoOAPVH8AYAAKn28JwhRHdP87M1L3vGojNN2F5CNRsAGorgDQCoNa1uHZvxYbcbY/+OLeboaDFvpRWyGaf8RitgLzVhmyHjAIAjCN4AAO9UKd33k4dbP7ekwZiqKWKSVbKzkJ39BABgMgRvAEDlskW1xvZffoqKLILQHrCnzj+59XxpOmScOdkAgLII3gCAII0F8S2HfxLG4QoBGwDgGsEbABCNbPEvDU8fe/4LAjkKm9YK11NaIZuADQDwjeANAIjeRIE83Rt659ErdKPe2oO1wnQWqgnXAICqEbwBALWWbnm1d2e6kNuhvbvMz51UyiOkVcPTn4vOTH8SrAEAsSB4AwAaLQvmkm091r4VV/rPWXXdiWxudfp81rx06PfYc72ePdfrrBgOAIgbwRsAgILaQ7pkQ9ozE+2d3YTKejbEux1BGgCAIwjeAAB4ND6sj5f3zzPZXPZOsiHZ3WgPy+1mLHqPeQYAAIoieAMAAAAA4NAU8xMAAAAAADhA8AYAAAAAwCGCNwAAAAAADhG8AQAAAABwiOANAAAAAIBDBG8AAAAAABwieAMAAAAA4BDBGwAAAAAAhwjeAAAAAAA4RPAGAAAAAMAhgjcAAAAAAA4RvAEAAAAAcIjgDQAAAACAQwRvAAAAAAAcIngDAAAAAOBQ3ymDg4dGR0eTl7ZtMy+FbWRkezKyfcQc1VP/7P5kcHCROQIAAAAAxCy64H3fpvuTja1HnS1Z8o7kM2tuMEcAANTXZ2+8yTyrr3OWL0/OOXu5OQLQBLavbVxH4kfwDhDBGwDQFJdecaV5Vl8rV1ycXNJ6AGgO29c2riPxY443AAAAAAAOEbwBAAAAAHCI4A0AAAAAgEMEbwAAAAAAHCJ4AwAAAADgEMEbAAAAAACHCN4AAAAAADhE8AYAAAAAwCGCNwAAAAAADhG8AQAAAABwiOANAAAAAIBDBG8AAAAAABwieAMAAAAA4BDBGwAAAAAAhwjeAAAAAAA4RPAGAAAAAMAhgjcAAAAAAA71nTI4eGh0dDR5ads281LY7tt0f7Kx9bDt02s+lSxdssQcAQAAHy694krzzJ7BRYuSKz94uTmq3sDCgWRgYKE5AtAEtq9tK1dcnFzSeiBeBG+D4A0AgH8ugveSJe9IPrPmBnMEAP4RvDEeQ80BAAAAAHCI4A0AAAAAgEMEbwAAAAAAHCJ4AwAAAADgEMEbAAAAAACHCN4AAAAAADhE8AYAAAAAwCGCNwAAAAAADhG8AQAAAABwiOANAAAAAIBDBG8AAAAAABwieAMAAAAA4BDBGwAAAAAAhwjeAAAAAAA4RPAGAAAAAMAhgjcAAAAAAA4RvAEAAAAAcIjgDQAAAACAQwRvAAAAAAAcIngDAAAAAOAQwRsAAAAAAIcI3gAAAAAAOETwBgAAAADAIYI3AAAAAAAOEbwBAAAAAHCI4A0AAAAAgEMEbwAAAAAAHCJ4AwAAAADgEMEbAAAAAACHCN4AAAAAADhE8AYAAAAAwCGCNwAAAAAADhG8AQAAAABwiOANAAAAAIBDBG8gUnv27Em2DA2lj299+6Hkvk33H37c/uU700f7a/rfZP97/X8BAAAA+NF3yuDgodHR0eSlbdvMS2FTgNjYetj26TWfSpYuWWKOgLAoKL8wPNwKzc8lw62fLwxvTbZv327+aXcWLlyYnDq4KBkcHGyd++9oPR9MZs+ebf4pbBlufVb67EbM57Vn957W85H0fRd9Bnrf+2f3t15blL4GNMmlV1xpntmzpHVN+8yaG8wRAPhn+9q2csXFySWtB+JF8DYI3gjR5meeSR57/InWzx+YV9xadvpprcfpyTlnLzevoCx1kjy9+Zn0s1NHSZnRBQrg+gzOWHZ6+jkATUDwBuBTVsxoN7BwIBkYWGiO7CB4YzyCt1Hn4P3ZG28yz3r321dcEURVTmH0sSeeMEe9OXXRYHLlBy83R9UbGdme/m36G3utandLAfCc5cuT97/vAusNkSu6Ntiiv73s363PTcP59dnZGMqfhfAL3/c+KuHjZDdNYz+3mleTdBrFeAMLF7Y+ywFzNHas0R28p+EgeIdJ3yeN2Nnddj3TiKv248z471k6mqrVtsbSfoRC7cjw1rFRbZmRkZHDI6bGa79v7W+1GbquUUQ6WnZPpfNZz/PuqzQaUOet3keNBuzl/SR4T06fhUb/jf0c+0zGn+tj5/TY6MCxa8zY9STmEZoEb6POwfuTN6xtXciPXMR7cc3VHwqiGmrzPHj/BRcEEbx18blv06bk8SeeNK+EQTew1159dfA3UDYbuDLXA4W/v/naPU4/NzW2F77vgmgbml7pPU7XJ9jy3FgYsHQ907mtjjfdrBLGq0Pwrl76/Rp6Lr3xVdi29R2T9u+ZrquE8TFq89Mw2Aoa6XWt9b7b6LSVwUWL0vc5m0pW1/vbyei9zUYM9nouq93Ve6hCRNn3keB9RNaOa0SgrjW9FpZ0juvzWLr0HVGNECR4G3WveA+1TnIbQvnS1+1v0nmtaqmtRteF0MNfFcHb5+emXvhrP/yh2l6nxtN7mo5ssXDjVJQCgkY7MNXCL4J3NRT0stFjPtse3TArxGhKTdM6E/U+K3joPbd1D1OE3uemjKDKFpt1cU6rHdb9YtE2ounBW5/Bg63PY3PrnHfZjuv8jmWU5tT5Cxb88cGDB5M/+vjHzUthUy+Ji4uVvkTtw6TqRI3rT3/2M3PUm7R3KYAbfzVatoZh68uqalcV1Cv7uRtvSr771PeS/fv3m1fDpO/dD3/4o2Tx296WLFgw37waDpsdcnnXAzUmf3LLf0+r3L4+N/039d9TRUo3rHWl78Td99yTfGX9XenaBjt27DD/xD1dU/Tf1I3bjl/tSE466aSkv58FB11z0Zmumy86UI6l68j/+u5TyR1f/qtk4/33p/cGvtsefaf1Pfv7B76RXs/6+pL0u1ZnqvQpDOq6pvbe9zQyfcYKPo/84z+mIUjHJ7fe8+nTp5v/Rfx0r3vbX/xF8ug//k9n57S+Pzp39XnqvjHvXsj2tS2Ue/A8ep/+R+v7fdv/85fJj370rPN2XJ+3rmXfeuih9JqizybUtpvgbdQ5eD/fOhltvmch3Mzcfc8GaxfWsR4y/5+9GolP//F/894A90IXz//11FPJgvnzK+usmIyv4K3P7ZNr1ib/+q//al7xSzdPdQzfupHR91o3pvobXd04FdHeiGsV+sWL31arG9TQELzda78RVvDz2aHVib7r+n1Uede88Lrdh+m6dvudf9U6x/+u8utaRp/9D1thSB0forY89uubzp/P//c/9XY/pf+OOjGkUxBuWvAeH7irON/1PQu57WYf7wbQggR1oy+3LVrJ0jc1Ehoub/Pv8EW/8x2tGwn9DU2jv1mhu+rPTZVv7dNeB3ov9bd87sY/SSsJoVED/ofXfaz1uz1jXgHionP3+hvWpiEg1DZHQUbXALWLGvUSO73PX/jirenf5HNIeVk6J2K/vqld1j1JFfT+1aUt7pXOIZ1LoVxn1HbruqdiSUgI3g1gc75DCCew7UbZ93yQrJEI9QaoqKaF7yob94kofGvoYsxUDVLD6HJhOhvGbqK/FP37jWbReatQoHM3lpFVCqnq3Iw5COq6NhZmw+tInEh2fVNHQWz3JSG0y2q/Yi2k2NB+nQntPdB1T9eTkO5VCd4N0D+73zzrXQhfKm0/YIvvhV3UcaHhtHWhBk83GXWnm8CQQndGPcuh9eYWoevI3V/bkFaDYgkEQnUDsVAH9WfX3RR8p9ZEdH3QTbyuEbFR55yua6EFkCLUURBihXAyIXWGq8OoiW2DzvMYrjM6T0LpOCd4N4DtFSzrMAws43N1T12g/jTCHuU8IfZy2qSbkNu/HF7ozvzNPfeYZ3HIGmoNA4uRbjAI3wiZrlmq8miuY8x0jYjpu6bfVZ1zMVNHqKq3oYdv/X6hdYar46JJbYM+g7SjJpLrjL6bIVS+Cd4ozWbFuRtaYC9GuiDHVN0rKutQqKMYOkvU065VuGMQW0M9GYVvhp0jRPqO1WnYaywdXfodYxxdMJG0czTw8B1qh7POgZCGNbuicyTGe1p11lQ9jYXg3RDa09SWujTo4mt1SA3HjmW+VzcU/urY2MTSsCgEhv69TIe+tm7m6tL5pN7zJkyzQDx0DajjqCqFmZCHnavjsy6hO6NzKNQOHL3fIS9Yp+mEdRoZOl56bqy7KdoOdI1grPK8JnijtBcq7gUdHh42z+KgL3jIQ5VtUWMTYiPdLfWKxrQ4zoMBV731+8W4cE+euk+zQFwUuus4qko07DzEzl21E3Vat6Wdrm0KWCFd4xRoQx9tpPfr7simgJWhgkTMo9b0+VQ5iobg3RAxbLhf1G6LjYD2DXVNgaiuN0PtdDELOfyVMXZhjquzJOQRBzH3jndSp3MecVMYCbkKaENolcQY24mydN2+b2M4Qfe+TZvS9z106rSPZQpYGfqb6jB6U39DVfdMBG+UVnXF2WbD62NV8ybM98noohxDo5gnxkqmOndCHPqsQFDH0J3RkPM6DytE+HT+xb6oVxFp0L0znPneqprVob3Lo9EGIbQteq9jCn11GwkRw2iDMqoapUnwbgiblV2bFedu2Kwenzo4aJ65odDts9o9uGhROp+//aHXfNFFjApgdULr5NHiPE0IBKrCAFUJKYy6Fsp6InVft2W8EObYP735mUZ0dIQqltEGRelvqeJaQvBuCJuV3SqrO7a/9K4r3j56BxWur7n6Q8ltX/yz5PM3rUs+s+aGox567St33pH+b5adfpr5f7nTpAp/aLTAT0gNY2xbnXVLN+DcEKIKmmNc9yHm44VQdWvCui3tNGqp6ra9jkO3Y6H7/rotIChVFIoI3g0xsHDAPOtdlfOVX7A4zH3hwoXmmRu6ULl8r/T7f3rNp9Jwfc7Zy5OBgcn/HnUw6H/z8Y9el/5/XFbB9TdXvV1Dk9n8jvRCN2lNCQQK3arGAL41cYSR2pgqQ6Datyrvg6pSZYeHRhjUecpS6Oo6qquK+9Wp8xcs+OODBw8mf/Txj5uXwqY9nF3czI0FF3vhNDT9/bOtDvm88H0XJNOnTzdH/oy0viS2et0GBxeln7srjz/xRPLDHz1rjuxScF733/7v5KSTTjKvFKfz/Lxz/2MyMjLirCFbMH9B8uu//u/NkR8hDGlWZ4jOK6mqAqrPN4TFFH3Nk9cojt/8zTPTv/mSFRen32k9zlh2evr96J89O/nVjh3J/v37zf/DDU3BcXk9qTMX3111RNb981AY2bjp78yRe9l37Zzly5P3t+4Bsu+apmyd9O9OSr9jO1rfNR+0u4ruQ6rw1+vv8ha81abo/VZ72n590/VusPW++7q+ia7nA63fx/UUvYk81rrva9rIjonoc/fdvquIpP2vXdJ5vnTJOw635e1/p+vvmr4/PtuKvlMGBw+Njo4mL23bZl4Km3rcXDTSqgL6Ppl9+8PrPmbtBK7q/dJQI1sLVugmQhVgVz55w1onwVah+zNrb7AyTF6Lw7gYPqSL6J/f+mfmyI9Lr7jSPPMnvSlqXbDPOP30w4G7nRos9aaqOuOrt971eV2E/mYFb1f0Hbhk5cXpNajo90CfgevFVL5+z93mGcpw8d3VFByNBqozbdHnep6xrnFZ4CtC1zy101qQy7WPf/Qjrevd6ebID61b8ck1a82RO2cvP6v1vq/oOJKtna65f/O1Dc5DSlXfK+0pXlXwVnsTSrV9Zeu7qO+jT67uE0X3KzrPJ7p/yqjNVvut/Oeq/fbZdjPUvEGKXsBDZnNhN/UWu6KbDxcXaoUMhSpbc9N/+4NXWPt3tVPjrxuUuhr7HD6Sdi6oEZys0dB3TpUhzbNXZ5WL93q8qvfZF5fDQHXjofdTN9xl3k8FB31eLqdZhLiqPOpJN6CuQ/eVV1yefmfKVIN0zbvyg5ena464/K5JFdM7XA9x13um9+7aD19d6p5N10N9VvrMXFL41f2Nbz5Dtzo91L4rjOmh9kY/tVaOXtc/bxIX1xm13Vp3SPeznUK36H+r+yid3+r4ccFn203wbhANSbJFQ/6roOHRMRje6maerS4+NjtQdEFz1VDXNYTowq8GoGylRdVZlw1HRp0eLqu6ecaq/G4CgW56eunt1/mu0SLqZXehqusimsd16NRNsdqbbqmd0nfNZUhx3fEwkacdzgdV6NZ71ksbr89Mn12ZTsmyfM+J9dWJ397pMVH7rvdUr+ufK4SrE7ju9N67uJ/QfWfZ4d1p+73GTfvts+0meDeIywqvL5rjbYvmk7jiouqYDfmzTRc/F5WJUBb5skk3kbrwd3tTo//fH6mH13ElqMr33lWHi25yynZ2TESfgW6cuv0MOxmu4TmPMLkMPwpuZW+KJ5J911x1No5V/f2FQIUQV0O5s9Bt47qkz06dlK64rvqP56MTX227KttFOz30Oel+TCPZdG9WVy46mtSW93J9cdF+U/FG8KqqPO/ZXV0lrwwXX2LNI3all8rGZOo21Fw3Rhqa3ys1GLZusELk4ty33emk997FOU/FG764OtdUTbIRuttde7Wbji7ZssXfd85ltdt2mNAIK1ejDXzPd3bdkayOIb3/3dD7fHMrsLvuTK+K7fZc53iviyLq32F7pKbPqQwE7waxWeG1WXkuw+YF3+XicC6+xC6CQkYrQNsWymIkNuhCbzMs69/jYvRCCFwM/3TxXrlYEVkVuDqvbYAwuBr+OXZD23vn4niqIrpqv15wNK1rIq5GtKgCmDfPtRuu1nARnxVCl/eben80Cq0X+ne4GkVVJV1jbN/LaoV+G++T7lljfb8J3uhKLJXnulBvqs253ePpAuZi3kxdQoiCn+2LvG5EXQ1Rq/J9dxEIXHQMuTrnd+/ZbZ4BbriqAOqm2FU74+IaKj4rVa5GGbjaFk3vt6sOj7qM7lHl1MZ5qY6Tuu2i4KJzZdkyO22ui/bbxb3LRAjeDWJz78Uqqpk2LwIuhwW5uFi56A0fz8UaAHUIIQrHrm5eXN1w2Vz9vwwX576GAbq4YRcbc8bHo+IN11xVG20PMR/PRUeXuHo/2mnRSBc35npPXF3fRJ0pLtRhPQu17TbPed2nvf8CN216FVysVWRzpKntUau+1sYheDeIy4t7bGb3x/Ve2Ow0mcypDsJ9HUKIyyHhLoJf3bicEuKiuldVpweaw8XQW4UQ1x28roK9j+2tRra7WdfGdWeHrnEuCg0+txRzNarBxXt/yUo3IzvqwPZ56OO+2AWCd8PYPPF99DK3s3mhH3A0xFdcDMHyUfEeWDhgntkTewhRA+ryxsjVTVFVXNyMudx9wGWoB1xx0aHpOgCKq++bjzVn3C1m577zdRlruEzIxYgz3TPUZf0W26MabBe8fNwXu0DwbpjYKr3tbDauAwP2Q6ZLPnr2Yr2IueRqaGS7OoW/qhZd7IWrefaAKy6GPLvsjG7nYmuxqnZZ6ZWvTldXnZe+5sS6oPfeVWXaRyeWD4zecoPg3TA2G1ffw4htLujWH9lQoFiHLvkeFWGbi0W9xnO5aJ5vLhZd7J/db565Yfv9j/2cR9hctbu+hm2eusj+f8dPxdv+99pXZ7erz9bXnFgXXHZ4637N1VZuMWOE2RiCd8PYrPT67g2zuW0I1d2JuahGxMxHQ1Gnc9HF1j58V4EjXC1Y6et75uK/43O+sU2+Rt4pCMbaee/K0qVu73V8dNq7xkKhbhC8G8ZmpTfW4V3isooW8/uCIzQE2cfNiuuKLgB04nOdCRcjfLZHOMVFXK5fMZ6LDo+Yg9mgg5EX7eqwcGrMUwlCRvBuGJsXX9/zOW2ubOmyd9/2+0IVuhq+hoD7qjQBwERiXvvFl1ir6i7FPAfYR/tep4VTYQ/BGwAmENs6AADqz9Xq2ugs1qo6juVrQU061TERgnfD2Jyz6mpvxYnYHNJEBRlFDEa6R2Sd8F0F6iXWvXdjR0fyEb5Gs7GYGCZC8EYUXC0oAwAA/GCRryMGFvrb1pSO5CN8bZ3nK+AjLgTvBrJZRfK1uIbN+VUutjMBAAAoimBWDV+ryQMTIXijJ74q0TYXLGMhGQAAAAA+EbwbyGbFN8aVPn0NMwIAAEDzMMcbEyF4N5DNiq+vLcW2DA2ZZ71jeBcAAAAAnwjeDWSz4rtnd3z7OPpc0AQAAAAACN4NZLPi+8LWYfPMLZuLuFHxBgAAAOATwbuBYqz47tljp7LOViYAAAAAfCN4N5DNiq+P7cRsLuA2OLjIPAMAAAAAPwjeDWWr8murEt3JyPYR8wwAAAAA4kPwbiiblV/XW4rZDPds7wAAAADAN4I3eua6Iv2Ch+HsAAAAAOAKwbuhbFZ+fQw3t+VU5ngDAAAA8IzgjZ65rkgPD9vbsoxVzQEAAAD41nfK4OCh0dHR5KVt28xLYbtv0/3JxtbDtrOXn5UMDFS/zdY5y5d72Wd68zPPJF/44pfMUW9Wrrg4uaT1cOWzN96UDA09Z45685U773Aevm3+vrJkyTuSz6y5wRy5FfPvfukVV5pndrg+r9vF/Lu3i/H8ifmcrwvb539IbJ8PLu6BfJ+zLj7vr99zt3nmRoy/czsX542vdoa2/Qh+96PZ/B0/veZTXtaBouJtPP7Ek+lFqeqHrxW8bYbPLUND5pkbNhdvo+INAAAAwDeCd0OdOjhonoVv+3Y7wXvhQvcjCQAAAABgPIJ3Q9ms/LrcTszmwm0+hvADTabhqho+aevBkG0AAOI3MuJnRG/oCN4NZqsCbKsiPZEXLC6s1s8wcwAAAMCrEYdZISYE7wazWQGOYUuxwYiG1wMAAAB1sGd3PFsPu0TwbjCbFWCblel2WyyuNgwAAADAr+GtW6Mo0rlG8G6wplWAly55h3kGAAAAwJenNz9jnjUXwRtWuKpMsxgDAAAA4I+L7Xc3P2M3eGtvcFuPgYUD5t/qFsG7wWKoANtcjMHHxvgAAABAzAYHF5ln9mx+5gfmmR2XtAKzrYevnY8I3rBi2NEcbxZjAAAAAOL32ONPmGfNRPBuMJsV4N2OFkzQYgw2DC6y33MHAAAA1M2pi9ysA3XfpvvNs2YieMOKkZGw9+eb3c8e3gAAAEAeV/fN27dvb3TVm+DdcLYqwfoi2bZlaMg8693AQj9zNwAAAABMrMlVb4J3wzWlEjww4Ge1QgAAACBmZ5x+unlmX5Or3gTvhrNZCbZZoZbhYTvzu4WKNwAAAJBPq5q72FIso6r3HkfrQ4WM4N1wIVeCbS7Y5mubAAAAACB2y04/zTyzT1Xv+zY2b8g5wbvh+i32ZtmsUIvNrcT6Z/ebZwAAAAA6OWOZu+Hm8q2HHrKeHUJH8G44mxvk295S7IWt9vYGt/l3AgAAAHW2zOE878ztX77TPGuGvlMGBw+Njo4mL23bZl4Km+YEbHSwGt7Zy88KYtj1OcuXex0WrZ6mT65Za456o/fw2g9fbY5699kbb0qGhp4zR735+j13m2fu2fy9ZcmSdySfWXODOXIr5t/90iuuNM/sWLni4uSS1sOHmH/32MV8zteF7fNf6vo5uLgH8v1eufi8XbfxMf7O7VycN77aGdr2I6po27/wxVuTzc/8wBy5ceUVlyfvf98F5qjeqHgb55y9PD2Zq374notssxI8YnlLMVs3w7qpAAAAAFCcj6q3OoZGRuxvSxwigjessTknGwAAAEB1VJh0XcDS6ua339mMIecEb1j7Qg1vtbdAgs3FFk5dNGieAQAAAChKI3Jd0yhXVb7rjuCNIO3es9s8693sfnf7EAIIx5ahoeSxx59IG2897v7ahnQOd/vjD6/7WDrvLnvYnN8NAEDdLF2yxMu0Ta1DUPdVzgnesFoRtvWFsTnX41RWNAdqRdcHhWyFay388skb1qYh+nM3/klyx51/lTbeemirEgXr9of2DgUAAMX5qHpL3Vc5J3jDakXYVqXa5kJtsy3uVQ7AP3XofevbD6UVawXs1R/9WBqyFa612qrNaS4AAOBovqreas/rPOSc4A2rFWFblWqbC7UNLKx+mzgA5Shsa6i4hoZry8O779nAsHAAACpy7dVXeylmqVNdo9rqiOANq18iW5XqF7YOm2e9871FG4DuaY62ho4rbGuoOEPDAQConu6n/Q05/6t0tfO6IXjDakU4tC3FGGYOxEFDy3736mvSOdoMHQcAIDzvf98FXoacq9P9vo31G3JO8IbVirCtSrWtRdoGa7Cwmt6L8Sszu3rYet+BolTh1nByDS2rY+82AAB14mvIuUa91W3IOcEbqdAqw9yAH6H3YvzKzK4evO/wRZ08GlKuCjfDyQEAiIPPIedf+OKXanVvSvBGylZlWOGtVza3EtMqjADCkq1QzpByAADi42vIuUJ3nbYYI3gjOCPbR8wzAHWSNaBaoZzRFQAAxMvXkHNtG7r5mWfMUdwI3kjZrAz3WrG2eUO+1ENvHIB8+l5/dt1NyeNPPGleAQAAsdKQ82s//CFz5FZdVjkneMO6XivWL7DAF1Araiyvv2EtQ8sBAKiRZaefnpy9/Cxz5I7uI/70i7eao3gRvJGyWRkOqUfq1MFB8wxAFbJKNwuoAQBQP7/9wSuShQvt7ZA0Ga0jpTViYkbwhnW9Vqxtbh3APt5AtRS6qXQDAFBPutf2NeT8vk33W12E2TeCN1J1rAz76H0DMLm7v7aB0A0AQM1praiVHrYY0yi62++Md5VzgjdSNivDvVasbfVkadEHANXQdeBbD8U9JAwAABSjvb0HF9nZnrgTDTlX5TtGBG8cFkqF2NZc0H6GmQOVSHukv/xX5ggAADTBtR/2s8XYxlbwHo5wMWaCNw6zVSHu5Ytgc2G2QRZWAyrx4LcfCmYxtSVL3pGuuKohcJ9e86n08ZU770i+fs/d6UP/HAAA9G5wcFFa+fbh9i/HN+Sc4I3DbFWIewnPLwwPm2e9o+IN+Kfvf5WrjmrkzvsvuCD5+Ec/kgbrz6y5Ie2B142A5qDpwaKLAAC48f73XZAsO/00c+SO1pDRWjIxIXjjMJsVYpuV626p1w2AX6p2V/H9V1X7ti/+WfLnt/5ZcuUHL0/3FgUAAP75GnKutWRs7obkGsEbh9msEHdbud4y9Jx5BiBGPqvdatQ1hFxDx9XIs6AiAADVU/vsa4sxrSkTQsGvCII3DqtbhVhDSgH489jjT3hr/FThVnVbQ8gZOg4AQFg08kxTv1zTmjL3bYxjlXOCN5zotnI9bHGONwC/Nj/zjHnmjkK25m/7GsYGAAC6c8lKP1uMaci5j3uQXhG8cVgIFeLdlqplPr7kAI5QpXvzMz8wR27oe/35G9cxfxsAgAiMDTm/2hy5FcOQc4I3nOi2cr1nt50vzOx+KmGAT64XN1Ho/szaG5jHDQBARDSVVeuxuKbQHfoWYwRvHMVWpbjbyrW2BrBhYGF9bs7VW6i9hmN8nLqIvdSbYssWdwsjZqGboeUAAMRH67HovtA1jbwLech53ymDg4dGR0eTl7ZtMy+F7b5N9ycbWw/bPr3mUyzG1fLZG29KhiysLK69dLXwUVmXXnGledYb9az52sB/PFvvYUYXKu1FjM5snTsZn+dQzL97xvZ5n1HY1vByV5Vuvq/Vs33+S10/Bxf3QL7fKxeft/bsdynG37mdi/PGVztD235Elfe2NoyMbE8+uWat8+Hgru8bekHFG0exVaHUCoNl2RyqWqeKNxADF6FbrrzicoaXAwAQObXlPrYYS4ec3xnmkHOCN45ic250lQsccKMO+KNebBc0xPycs5ebIwAAEDMtjrrs9NPMkTsqBnzr2w+Zo3AQvHEUm5XiF0ousDY8bGd+t/TP7jfPALg2sn3EPLNL25AAAID60CrnmpLqmqZYuCoMdIvgjaNUWSm2tZWYaAVFAH64aNg0R4ttwwAAqBe1776GnH/hi7eaozAQvHEUm5XishXskRE3VTMAbo10saZDnnOWM8QcAIA60oLWWizONe2WpMp3KAjeOIrNSnHZCratm3cf2xUAcItRKwAA1JdWaLe1jXEnWtHf5nTWXhC84QwVbADdYntHAADqTfO9NfTctdu/HMYq5wRvHMNWxbhsBdvWdkS2tkQDUB12JgAAoN40us3H3uShDDkneMOZPbur2U7M5pZoAPLZ3IMfAAA0x/vfd4GXaaIhDDkneOMYtoZ4qnepKJtfhFOZGwpEzcc2IwAAIAx/9NHrGjHknOCNIOzes9s8652PLy4AdxhmDgBAc/jaYqzqIecEbxzDZsW46BBUm/sADywcMM8AAAAAhG7Z6acn77/gAnPkzre+/ZDV3FEGwRvHqKJibHMfYKplAAAAQFwuWXmx8+lme/bsSW6/s5oh5wRvHMNmxbhoj5KthdgYZg4AAADER/fxmu/tmnZSqqLqTfDGMWxWjItWsl/YOmye9UbbEgAAAACIj+7lV3rYYuy+TZvMM38I3piQrcpxVVuKAQAAAIiP9vYeXOS2mPb4E096r3oTvDEhW5XjopVsDfmwwdZWaAAAAACqce2HrzbP3PFd9SZ4Y0L9zJUGAAAAUAEVAV2vcq6qt08Eb0xocHDQPOtNkUq2zWEeS5e8wzwDAAAAECsfq5wX3frYBoI3KjeyfcQ8AwAAAICxNaeu/fCHzJEbWyxNdy2C4I0J2awcDw9vNc8mpv30bDnVUqUeAAAAQLW0ftMShyNaN29+xjxzj+AN53bv2W2eTeyFnGBeBvt4AwAAAPVxzvLl5pl9w1u3Wi0CdkLwxoRsVo59ncyu54AAAAAA8Oucs5c7vc9/YbjYLky9InhjQjYrx3kVbVuLGgwMELwBAACAutHe3rEjeGNSrjeut40t0AAAAID6UdXb1ZRShpqjcrP77ZzceRXtvMXXirK1BRoAAACAsCw7/TTzzC6b6011QvDGpAY8zZm21ctExbt3n73xpuTSK6609tC/DwAAAOjVGctON8/iRPDGpAYGBsyz3nSqaNsc2jE4GNfQeAAAAADFaGuxmBG8MSlbFeRO4drXKoIAAAAA4qU53rGtQdWO4I1J2awgj4xsN8/cib0XDAAAAKjaRNMHe3nct+l+82/u3bKIh5sTvOHFyPYR8+xoW4aeM88AAAAAYHJLl7zDPIsPwRuTiqmCHPOwEwAAAAD1RvCGF5NVtoctzfG2tfUZAAAAgDANLLSz+HMVCN7oaInj4Ry7La1qfuoi9vAGAAAA6mxgwM92xy4QvOHFZJVtW4uuUfEGAAAAECqCNzqyVUmerLK9fbud4D2wMN7eLwAAAAD1RvBGR7Yqya63E4t52AkAAACAeiN4oyNbleSJKttbhobMs971z+43zwAAAAAgLARvdGSzkrzH0kJqExkcZDsxAAAAAGEieKMjm5XkF8YtsDY8vNU8AwAAAID6InijI5eVZFtbibne8gwAAAAAekHwRq7Zs+0ssLZl6DnzbMzIyIh5BgAAAAD1RfBGLldV7xFLW4ktXbLEPAMAAACA8BC84c34Cvee3e4WWwMAAACAUBC8kctWRXl8hXt4q53F1U5lRXMAAAAAASN4wxtXFW5bc9ABAAAAwAWCN3LZqii3V7i3DA2ZZ70bWDhgngEAAABAeAjeyBV6RXlgYKF5BgAAAADhIXgjl82KclbpHhmxs6I5w8wBAAAAhI7gjVwuKsq2thJztdUZAAAAANhC8EYhCxfaCd/Dw2PzvG0ttNZPxRsAAABA4AjeKMRW1Xv3nrHA/cLW4fRnrwYHB80zAHWRddABAADUBcEbhdiqLLvaUgxAfewxHXQAUFdc5+rN5u49qA+CNwqxVVnOKt1DQ8+lP3u1dMk7zLP6srUQHQAACMMLw3ZG/hVB0QMIA8EbsGzpkiXmmR3bLS1EBwBAlagCVsPW9D4AvSF4oxBblWVVum3O3zyVOd5WUV1HKBiGCRzrVHbyQMMsacDIRjQHwRve7d6z2zzrHft422W7uj5gaTV8NI+vYZgs5IaY0OZVg/BXH8Oe2pYtlqZUol4I3ijE5vBpWxcjW1ucxcBHOHBRYRwYGDDPgPDonKeyjqazteZKES6+b7F2RvgcYeZijnesoy+y3XVc8xXwEReCN7zbuOl+86w3trY4s81FlXdk+4h55o7PhV5QL7bXNfCFcx4Y4ysEvuCgE3kw0gDoc7TN8Fb7/61YOzx8dTS5ONcRP4I3ChtcFFbjFuowZhcdAj4u4C5uApiPiJAxzByxcbWuiY/OXYl1cbVTF9l/330teObqPe+f3W+eueXivXdNIztYGBcTIXijsNn9YfVuhjqMeWCh/d/Lx5AlFxUP5iOiWz7mx1HxRmxcXVN9zUd10c74GHHj4v7HV+XVVQejr5EGLt571x1AT29+xjxDxuZ9bMxTxAjeKCy0CnN/oKHORcXbx03R08/YbyhcdEKgGVzfGKnh3vzMD8wREA8Xo898de7GWgV0NXrLx6gbFx2MsXequ76neuyJJ8wzZGzOrY+505zgjcJCqzCHPK/L9sJvCgmPPe7uQq7G3/YNkRrmUOfhwy4XN6Wub0hVkYi51xzN5eK6qk4o19+HzQ46d8XWdqeduAqaLtt1cdXB6PP+y0X7stlhRVodTD4XLIQdPq4jQvBGYaFWmEPk4gvs6qZFHvz2t80ze2Jd8Ablubgp1Q2jy/BNRQKxGnQ0z9t1CHzw2w+ZZ3a5mvfeztVwdhcjzdq56mD0Oe960MF/S4vNuepo+paj89w32yNrbK6s72sxSBcI3igstCAV8krKLm4E1Gvt4mLjqkc81pWuEQ4XHUKiYexUJBArV5UZV8FY9J1zMcxco8t8DXt2sZe33hOXHR6uOhiXLvVTHRSN8HDxGbs433WPVpdOXdtz622urO9jioYrBG8U5msFyzpw1Ulx+513mmf2/M3X7nHTI07FuzFcdbK4Gv56+5f/yjwD4uPq+6YQeJ+l7T7Hu/trG8wzu3wNDxVXVV695y6ucwr0rjoYXVShO3HxOasybft91z2ai8+yLmyt3eJiRwBfGYfgjcJCqniHtrXZeLoxctFDq0bUZu+4LoKPP/GkObKLinez2F7XQHQDc99Gu0Hg9i/fGe0CT0DGVRuoMGJ7ZJWCpYt9pMVnO+Oqypt2eFi+zunaefc9bjo7dK33vX6Li+kVeo9sVr11ntdpJJWLjiYbi9q5mkPvK+NMnb9gwR8fPHgw+aOPf9y8FDZ9aK5ObDUM+vdX/dBJ5WPOUjc2OuoNL+ukk/5dcs7Zy81RmLZt2+bkZkNVQK0w3+s5oqE6n7/lT5P9+/ebV+xZdvpp3j8f2+embuh83dTF/LtnhoaGkm3/+q/myJ6f/uxn6eiJk046ybzSPYVuVx1NGd2Qhn5tCo2LdqXun4Ou2z/80bPmyB79e9Uh+3/95pnJ9OnTzavdU0fx1xwFQLn2w1db+T2LWLBgQfLIo//opM3Udc5Guy4KlJ9dd5OzDsZzli9Pfv3X/7058sfFtVt5wkb7ohEdf/+Nb5gjd3y27c+3zknbeUv55sL3XWCOuvP4E09Yv/ZpGomv9oLgbSgg6d8bwkNL7od6w+BqnlZZZ5x+eiUX/jL6+pLku099zxzZpfCtxe4Wv+1t5pVytFDbF774JWdDos479z92/bt1i+B9hM/fPaPQreuXC2pkF7/t11phqrudFXSe/48HvpF8+6F/MK+4Q/Auj+Bd3oL5C5JvPeRmTvaOHTuSH/7wR+k1fMGC+ebV8hS677jT3bQO3x28CviuOtSl13ZdstDt6neU3/udVT2dF93o7+9P/r51DXehl/ZF7/dff3V98ug//k/zils+23YVZ2wHXL1fmjbQS1uuqWL6aZOuI77eV4aaI0q2F31wYdnpp5tnbmgY2WdvvCntDClKvY36/7gM3eL6b0d4XM611Ln6uRv/JK0qlD1v9f24/oa1TsIdUBV1LLiccqXgpraim/nH+s7p/+sydEsV7cwZy8Jr10WfkT6rP7zuY05Dt4aZVzHtUFP3XJ3vWftSdjVydSzp/XY9iqoqrr5fvQRnTQ1wUfzzuVYEFe8AhdxTrx4wDYmqmoY6hTocv93IyIjTRlAXIF301QBsb4Xq/Qf2J7/asSMZab3e/vjWt/8h+ev1dyUb77/f+YgFVSFU8faNivcRPn/3jMuKREbXHv03hoeHkxkzpifTp89o/XeP7YTTTWt2zqvK3W0j3w0q3uVR8e6OKrAudqTIaEi17rc0vFqVXn2PThgYmHBot+4NvvvUU8nX//b/a32ef+e8nVEQU+XV1zDzjIYkK6C5GG6eydp17TWt9lyLPk1UYdbn8cMf/SgdzaP3/ZnWueDy95L3v+8C721LRu+Fy/t/VXeze6nprfZlfFU2nVv83FD6fquDRJ+R6/d7PJ9tu9pWvR+220/9+371q18l/+fSJaW+v/pdXE1b+e0PXuHtWtJ3yuDgodHR0eSl1kU1BurRq3vlQnMNPrPmBnMUllDe/0+v+VRlF/8ydKFe/dGPmaNmqOqzufSKK80zO1auuDi5pPXwIebfvd0Xvnir0yDQiW7EfQbsyYR8/Q6V7fNfmvA56HxXxa2q877K71xV1zip8j6oyvdc/+0/v/XP0p9V0N/9u1dfY46ayfd5r1Fmrqa0aATDxz96XdpJmkedXa4WC9Tv8fmb1pkj9xhqjlK0+EcIYtnaTBcUVYCbQhewGDpE4EaVFcaqbkaBqigAqQJZlSq/cxr1VhUtDlVl+KyKzrWq/m7Rf/vs5WeZI/jgcr92jQZVYUpTK1TN1ki17PxW0UrH6uRSZ4ur0C3LHE8fGY/gjVKK9Ez5ENLWZnmqvDHy7ZKV1VQgEAbNCavyxgxomipDYFXef8EFld6L6P1uUrsu+pur7OzIMI3HLx/rKGj6gNaD0Dx7hWyNgFIg17FGlrjubPJ9XhO8UcrAwu5WImwyVYCb0EuroZ0sqoYQbs6AplAguvKKy81R/envDaGDVx0eWmisKTS8OYTCi+6nXC4qaJvOVz1iVudRm7o3931eE7xRSggXXgW82Gjhhtgvvp3ob7v26qvNEZqMigTgl75zMbaL3bj2wx8Koi1N27zW79IECrohVfhjGm3w8Y9+JKoRmhOp8+iOS1asMM/8IXijtDoHSFfq3kiH0huO6ukmQ0NBY6HvJvMGETt1fNa9bdb3NKRRVaq+xnSt68bYvUtYnerqaIphtIHOjTqseaO/oY4de6rkV3HfSvBGaVX33sV6IdMNQx0bad0MNW2+GzrTUNBYQoCG6VKlR+x0A6nqWl2p6qqRY6G58oOX13q0gQoGIVZsQy9k6HzVuVEXVe0g4FJV960Eb8CjujXSod4MoVqxjPC45uoPEbpRG+qU1jldN7qefGbtDcF25v3RR6+Lat5xUdq6KtR1W0IebaDzVNtk1Yne7zqNDKtyNALBG6VVXXE+NfL5MnVppPU3hHwzhGrphi3kTibdVBK6UTc6p+sUvtPQvSbsdib9HVttYZ3Cd5X7pBelQkaI77k6nes49a4uaxVpmkKVCzQSvBGd2L/4dWikCd0oQp1MIZ4j6rmv49A5QOoSvtXO/PmtfxbF4lR1aNczOndiuT6qshxSG6OpS3Xd3SU9x9fcYI7ipL+h6vsSgjdKW1pxFasOW5rpS//5m9ZFOedboYXQjSKyhjqkc0Xnb2iLBQG2KXx/es2nor1Oa+Gj2NqZ9HrX+p1jHZKr31/rBMQ0EkiV5VDaGH3udV/vRp1gMXfqqWOk6o48gjeiU6chPBoqpYYuhpsL/Y664Cq0xPD7Igxq5EK5MVKjS+hGU2hamCrGMe3Dq+uEvqehVTKL0u+sa4zayph+f00LGjtX4qvWZm1MlSudN6lDN9YRNfqdQ+hUInijtFMHB80z/2JsiPOooVODF3IvuW7cPn/juqh6whEO3Rjp/KlqzrduyFT9Y/V9NI3aTIVYnf+hb8GkNlDXiTp8T9VWht6ui84JBZLQRiaVpTbm5pvWVdLJlBUkmiQL3zGcM2PXwHBGchC8UVqVX7Sqh4i4ovdUF27ddKihDuVipt9FN2y6cavjYiHwJxsSqGqWz/Nb0zl0Q1b1opBAlbLqt26WQ5qHrGtB1s6oDaxTO5O167d9cSyAh9Kui84BXYt1TtSlQ13vr+5VdI776GTKOnSbWpDQ311lh3oR6XpErfuOkEZy9J0yOHhodHQ0eWnbNvNS2O7bdH+ysfWoM53EOlFC9ofXfSzZvn27OfJHvZm6sNbdnj17kqc3P5N869sPJcNbt5pX/VBjcuH7LkgvqiHdKOS59IorzTM7fK7qGvPv3g2d37d/+c5k8zM/MK/YpxvdS1asKHQjv2VoKPncjX9ijnoTw/UbGBnZnrYvTz/zTCVtub4n5yxfnpyx7PSo2plePfb4E8ljTzyRDA09Z17xR++z3nO17XUtYrTT+a3MoPbGNrWxuk8qcu5+9sabrH3eobbtLt/rbqnTXauXh3Z9iS54ZxetOjt10WDwG+/f/bUNyQtbh82RP1mj0STDw1vT817vt6vGWjdBOu+WLTst2sogwfuI0IN3Rjf/m1s3/jq/bXQwqXdb1wf1bpepnOlm4YVhO9ez/tn9jbipRX3oO6iOXrU1rjp6dfOr74XaF7XjTR9BlV371PGh991VYNE1Ue+7Ojjqutp2J3pf1b7ofe71/qnbooQ+3917dpuj3mhx4VC/Ozqn777nHqcd6kWU6XSvQnTBG2g6XcQVEtKfpvOjaIOSDQlSyFZjrPn6dQkJBO8jYgne7dpvRLPjTpU43QSpYdWN/EDrefqz4TfzgA0aAaLvXzdtTPa9FH0nT221L4Ot9obvZmd6v0e2j7Te++da7/twK6jtyb0Gtmtv2/VeZ50cOEIhXOf2li3Pped1kTZGu/joPknvZV3ulVzT+6oCqTo8fI2mUUeI1oYoOgqhSgRvoIZ0wyRNaijUoNrks2c55t/dB53Paky5eQfCkAVFwp1faivqdn0PgUK5zmnCtV3ZiLYXWm247RCedYzoGhTTlBWCNwAAAADACXVsDG8dTkN4NqqmSBhXoM46RLLRbXrE2vlE8AYAAAAAVCIbRSN1HtVB8AYAAAAAwCH28QYAAAAAwCGCNwAAAAAADhG8AQAAAABwiOANAAAAAIBDBG8AAAAAABwieAMAAAAA4BDBGwAAAAAAhwjeAAAAAAA4RPAGAAAAAMAhgjcAAAAAAA4RvAEAAAAAcIjgDQAAAACAQwRvAAAAAAAcIngDAAAAAOAQwRsAAAAAAIcI3gAAAAAAOETwBgAAAADAIYI3AAAAAAAOEbwBAAAAAHCI4A0AAAAAgEMEbwAAAAAAHCJ4AwAAAADgEMEbAAAAAACHCN4AAAAAADhE8AYAAAAAwCGCNwAAAAAADhG8AQAAAABwiOANAAAAAIBDBG8AAAAAABwieAMAAAAA4BDBGwAAAAAAhwjeAAAAAAA4RPAGAAAAAMAhgjcAAAAAAA4RvAEAAAAAcIjgDQAAAACAQwRvAAAAAAAcIngDAAAAAOAQwRsAAAAAAIcI3gAAAAAAOETwBgAAAADAIYI3AAAAAAAOEbwBAAAAAHCI4A0AAAAAgEMEbwAAAAAAHCJ4AwAAAADgEMEbAAAAAACHCN4AAAAAADjUd8rg4KHR0dHkpW3bzEsAAAAAAFfe+MUPzLMJzJybTBlYbA5QFwRvAAAAAPDk4M8eT0a/cb05Olbf3Lcks37nfnOEuiB4o7EO7fzXZPQfPmeOjtU3798lM/7Tp81RPA5u+WZyoPUoY8rA25Nk5pz0eV97L2vNelz1mb8x8nzr8RPzSuu11vGhfbvS5/rM9chMfetpSV/rvekz7w0AoBoKKgf++f81RxNTm91+DS9LFcj9T/21OZrY9HM+6q1dfP1Lv2medXbcR75rnlVr/2O3HtW+5hnf5mb3H01od0cfuD45+L8fN0cTm7nyL5IprfsQ1AfBGxNSOElaYSQNKq3HeFPaLpaxXhTUQBz4l781RxObtWpTT414FXTTcOB7XzFHvVPj17dwcTL1185Jpi79QHSNoToidMP2xos/aAXs18yr5ajnWef5tNbfH+r5nnez2K79+yvjb35gl66jnTrD1PE19dfONkfNlvdeyfQzf888i5tC3sEOQ011veF7eYSu33vvON8cTWzaf/gvrWB8nTkqT53xB4ceNEfH8l2FjC1477vv91tt7T+bo94cde/Ruj7W6bug69ze9SvM0eSmLrkwygIQJkfwRkrB5ODPHktvBA7tesm8WtyU1sWxb2BxegOpYBJDlVQNeF4Q67URr4Lt4D2eGgL1+IccwPW5qjJy8F/+tuuwPRndeOnGX50QISl6g1bElJPfPfZd1ne6ddNT98qDa3nfSYYUHqE2aN/GPzBHEwslZPQqL6TE2P645jIYq63Yt/7ijm3GtPf8rteOnyYH7/F0nznt3f8luLa3G2Xu02Zd8zBtcI2wqnmDjYWTv032fvXidJ6JGrNuQre8sf359P+///Fbk/2PfdG8Gi5VQYsEsoND5YZsN4E+Z92cpKMiAqTfa9+GD6aNmu3QLfqOjD68Lr3BcPHvD4FunDQaRH+nOqg0JE6BCN3R9aYTnVPq/ERzpKPJcgIK7c+xNAqgk16+S2/87LHca3refx/u6D4zbXs3XBl9e5TXJrQr879F+AjeDZVWFVrhREG527Ads6JzoNUI1+2ip57TtKLZ9ijbm6r3ZXTj7wcXvnXDte/eKwuf0+pB19+vKv7U/+Pssfdi7lvMP+1MN81pdWSCqRh1o3loqkIqgNe1s8EVnZNFzkeNOEJzqNM7Tx3bn15pRF3eNbrb9yzvM1EbwdD/3mRtbvbohgK42qNYvxtF24RM3roGiAtDzRtIFyv1GpZxzAWydUOgi99E9L+declfmqPwFJ1bkwn97xkvbwhT3t+jRkHnSN6iHxLSe6NOAHUG5AXDbKh4pyHU2TzTIkPVdSMxo/UeVD0UzOZQ80709868/G5zhDxFFtDJMKTQdAo3YKh5kalOElv740ORe5iy36Ui9wVVLHRVt6Hmnd7DdBRI6/uvtlyjPYp8P2acvza6oed50yUmwiJr9UHFu2F0USsSunVzPf3s69LFxXRBV8N/1KN1463X03/WuiBoLpr+PzEoUmlop0akCVXNjBYxmXHRzelnn/eZhvTejD7widyGWpVtzf/LWyROVQ2F85mr7s9/D7Y/nxwosbBZVTQ3MfvOtj/0OZf5Duvv1cKEyKfvRtHQLbFWcFCOPucioUKa1v4UUWTdibLfpbz7AnXYEnzcUrurtlnrGqjt1T1o3ues+1nd18ZC3/uyoVvK7lSDcBG8G6bT9lkZ3YArWGsRiyLDqtQYpRfK1v9HN/FaeCtk3cybKxvW6yANnwVW0wyhQUhvZHOGbmmYYNnVQdXoF6lmaz50rDfH+pzbv8Mz/vPN5p9Mrmg1ounKfjcYUtgM5c+L5rU/neh6PKV1Pe+k7Hcp775g2rv/q3kGH/QZ6x50xsr89rfMjh5V67Zz9Y3//Thtbk0QvBtEvYJ54aTXVVTTm/iAVzQvU2lo19RFbtL9NHMavRAUuTHt9rzW36+e9zx16ZHWiAdVxzvRd0gLEaGzsjdZuj7rOo36Ugddp6G4E2lq+9NJXhBOv0sF1yBJ59zm3BfUYSXtGOkeJK8zWN+nWK6bnTqEOt1r0ebWB8G7QYoEzro3Lt2GI7133fZUxk77aIZMN1eTrTeQ6XVRnLyh6aL54HUxtcCQyon298cRZRfQydSlAwcT66Z63eT2ZzLpVoc5bVPRqnfee6spSjF0QNeVRmTpM+gkhlEhecWvae/5vY4LBzLypR4I3jjKoZGfmGf1k1dpyGtcm3pD3DdzrnkWpiI93ari9mrKyZ3DqG6O6zIXk7mMvet2lfJ0W8cCnaSIU7fVazpkjqWhyJ0UGZ6ra3beOgxsIVa9vBEOb7wYfsU77zucjjbr8HeqwBDaTjIoj+DdIEVuptWjVtebvrzeQjWuneaNNXWRm7wGrUh11KUiwbtv4O3mWff6CkyhiGW4W54mnuc2pRXKDgvoaARGJ1Q360mfa6f2VVO9JsMia8fKW2RN73Xe8FyNTOlEVXU6IquXTnvrUA1OP+uAQ2mRNkGj8vKKBKwDEj+Cd4OogdLWJJ2oR017E9exV61TpSFbsXRqqyHvpGlDfXQedLpRTFVcEX+jwCgNG+sOTCkQ3g8SvNGSF5ynaTu7DsNkubmqp04VL7VBOi86jrpiqOlR9F5NXdK5Gp1XZcz7ruVV1eFPXhsccsd37nQGE7jTdZI6tA0sshY/gnfDzLjolo4Nu+hLve/eK9OVIuvyBc+rNGSBWxe/Tr2qTVrkRuFrf84q+OkWVBZCbS+6mUfbjbzvjdQlsOZVgYThl5PruICOOvla35lO62mwyFr96NrQcaqTWUei06grFlk7Vu5w8w4jBfQd69R+pJ9HTmc8/MkbdRZy+5sXvNvPs45tQ+s+lkXW4kbwbhg1JEW2Z5AD3/tKsm/DB3MvGDHInVvTdqHrVPXWRa8O70cnqnJr2zl1vnRatEznkCo0oevUkYJj6fPPu8HXyJleFqurs7yb+exakzuksObXmaYpMtVJmt7+lJVWCHNG8k323ud9x9QJUuReCX7kVrwDXaNIbWqne6l0mHnbeUbbUG8E7wZStWXmZXfnNlaiG8jRh9cle796cdp4xVgBz6s0pHO42npSO/U2SuwXPb0fGs2QPdKQfd/vpw99zgrceQs86dzROVT1TUmRHm5bAbHu8/z0Xuo7Prrx9zt+9vrMy+6H3iR514csYKXz+TpWN1lkrU46LbanNii7TqWjrjpcV7npPlbe6JuJ3nt9tzRstxP27g5LrJ0gedMZxgftvM4k1nuIG8G7ofTFnnnJX6b7Exe5mCmA73/81nT+9/7Hbo3qS59XaRgftBXCO1VJY7/o6bPUaIbsoRt8/U3p39WhUie6QdQ5o3PHVqDtRWifw6Gcbc2qpPdK1Vg9VDU73PnS+j7v23Blsnf9ivQ7nhu6NWImgM8+RHrvOi2g0x6wJK+ywZDCesjbWm58G9Rp3jI33cfS+9fpPkbv/fjpM/pudbrWKfhUPY0K8cvr4NF5O1GxJ68zKe++FuEieDec5kfNXHV/Mu09v1ssgLcuIgf+5W/Tm3RVSmO4AcgbNjvRzS+LrB1NlTlVuGdefjeLzURKgXDfxj9IHxrFcrjzpfV9ztsHXbTdnq4V3IxOLm8Y8DGdfFxnGqHseTHRjXg7zotj5S2yNv4zyHsPWcMiQh06UqqS28EzyainvLaB9R7iRfBGGrinn/l76U11WgEvOCdWN/JZAA91FXQ1th0veuMqUJm8cNm0i572OdUQdFVGQ+pw8Vl57XQeZfpa51NdpIuAnfzu9Jowa9WmdHh5kc65Jis9pFDVjg7Dzdm3NX66VnbaJ3r8/E7JG3XFTfexctvsttWg09E/OeuX5HV+IEABtk95HTyTFXny2gady3kdeggTwRuH6YuuxmvW79yfzDh/bakAnq6C/tit5pVw5M63nKSxVqBTKJ9MzBc9fc7pMLpxjyKft25WDn/eT1W/6n2R4G1r+PehQBduKarI55uObFj5F8lxH/lueh3QlAJ9R3x2cMRKQ/g7DidWwJrgfcwbbs7WYnHLa4Mm+/xZZK0cfbc6BRXJ3rPcMJRTPQeKyFtULQ3XHa7/uW0D14AoEbwxIfX2pjferZtwhbIiNGRVFdFQKjRpr/aLky+qJp2G8+T1eBfZcilEqsoqUI1/6PNW4NKQcm0TpkZhMrrx0zDl0fs6L8QVgtB/P190Pmu4eCedKnPorOuA1fpcOn3X2Lc1bp0CctoJOkkblFfB5ab7WHltdtaJlTdiIO+9B4rI6xzL6+DJG27Oeg9xInijI63knAazVgAvWhFNV0UO4GKQ26s9wRC/dnm9jenQtRpe9DTMcfo51yWzrnk4N6jp8666IlfkvLQRXIr8O/K2O6na9HM+2nEkh4x+43qGN5ekcyNvheRON1Gd9m5O/90sshalvEXVOm1XlTfqipvuY6nN7tQe6LPIG6mVjv5ihE+QDv7iB+bZxEL73HLXF8rpKNK1Ie8ejPUe4kPwRiEK4KqIahG2PGrURh+43hxVJ/eilxOs0xufnGp/3asOmteb+x587yvmWTWKhF0bw8SL7BEa+sJjashnXNJ5H399f/drHn+Hm1McLW8BnfxOvs6VDW6u4pRb8cr53PMruJwX4+W+ZzntFYuqhetQTodwSMFb3/1ObYI6iIrcL+RdIzptU4gwEbxRSroIW4H9m9O5wBWG0tyLnnoSCzSwufuD1jx4S5EbEc1vrUqR/bVtVHDzGn2JYa/vNHxrS7AO3+F05Mp9v2+OkCd3dE3Odyit1OV8HoxCiIuq0Z2mbqRtUE7nb+6oq5zO5SbqJTgrDBW5L0A18jq/pwbU/uYVZTT64vUv/WbuQyPQOploqzyEjeCN0tRLN+M/32yOJpc3LMil3Er0jDlH9jHu8Mi72W3CRa+vSEW5wiGPRcKujQ6SN17MGebWupGOZYhiOp3g7OvM0cTS8P0PnzNHmIyuEXqvJlMkYEmn4ebCImtxyWuD8j5vyRt1pc7lJnT+lqH3LG947mQI3eHSdbbTtA0JpeNb90N56wvZxDUgLgRvdEUXuLy5tVWFsSIXPV3AD+9j3OnxL/lD+ep+0SsyHOqNKoN36/fLGw6fVgx76AhSRTNv6PXU/xDXgjy6ydQiep1oBXuGs3aWG4gLdvLlYZG1uOS1C/puTVThGv/Ia8tYZO1Y3Va9GWYerrzrbN49gE++28y6rjdUVwRvdG80zJtALnp2xfC3FblhSvcf7yK46P9z4Hudg5GqmtPe/V/NUTy0iF7eFjz7H7+VHvVJ6NzIW1StaCefglgn6X+L+XxRyFtUzSYWWTtWkcLAeJNt94fqqdqdd30MqdOkiikgdMDFg+CNrhSpAFa1wjMXPbuKzC2tejVvVW/zVuvWjXC6/VmJm1T9b4tsmaZtQTrN0Q3ZdC2gl/PeKXwXOQ+aJm9RNdu4uYqD744qRqUcq2xHKMPMw6Q2WIt9dhLS3Hx99/PaBO0SVPaRuxUobUM0CN4NpMqfHukFomRPuS4o+x+7Nb0Rz1PFXphppSHnoqeV2cs+8oYx1fmiV+RvKzIc3bUZF92cG3415Hzv+hXp+d9p6Ln+mf43+t92mr8rCq2qHMdK75nCd6f3Tt+pdJtAjyEzBr4DD9XN8Onz8b0fPousHatMEEuDW4F1GOCX7uf23XtlbhusbTJDkbfmjwK0RmSUfWhh405UWKj7ekN10XfK4OCh0dHR5KVt28xLqLt99/3+UfPG1Ojoi50u5NJ6ZMOt9DO7yUtvJlpf6qI3FDPOX1tJD6S2Mev0OypAa1/yshTE9m38A3M0MS04F0LjrfmiGro6mTLvQd6/SxQ8Z15+tzmqVhqYv3F9qYCo8z8753Welxkiqr89b3suXzQftBN1IHVqvIuc4yH9vVXTCADdFHai97ystEO0wzmoefkxd/TkKXIeHveR75pn4cm7ZmpIszoJy9p7x/kdr2tVtbkhSwsMOUOURQtNVlEoKCLvup4J5Tsx/v5yPFVvdb85GX3/dW3VnO4ibbGCrLY9DYHuH9RZ30ne399J3nsb0nuByRG8Gyjvy9urqm4Mi1z0erk52behc89rtzdUtvUSvHVjp4ZPe0MWXcwplA6HjBptDU3L6yXvlRo59bSHEkJ7Dd6i0Df68DpzNLFQzvOq5d3Ud9vJpyp6pxFFOt9mXfOwOaqfIsFbN689mTnX2SidvV+9uGNg6PZ6qZFmnRb77PZ8q7Mi55Lo+xRqZ2Ldgnc6rWmC97qbe9LQgmbevZc6+Wf9zv3mqLwi7XPI5zLGELwbyFXwzobcdtub16vci16PN6yFLnqrNlW+QEuR96FPjZ/Ry7kQcg+rAkzRXvMydIOr+YOhDU20EbylSJWo7lXXPOqQ2re+FbAcVCBd/rtjUDQs9cJVSNWosE777vZy412kYzmE9ic0uR3mgVcJ6xa8bdA9zLT3/F5woxTyOt1sjKzw8d+AW8zxbiDbC2HpJka9+BpuXFXolry5yFoAqxdTfu2c3J7EGBY/0g29Gsbs0a3Qb1jU+OgmN1uYJO1p71IatlthUze2umGv83xAfaZ575Uqb3nftzrLW1RN14lug7H+v7l7ejf4vQ9ZbhvUQ2eJAnXeDgQssnasvBDCFmJxUVs+c9X9wYVLdbrldfLb6CzN+3fkbm+JylHxbrBsLs3Yz58Uqgxm82HTm4BWyM7mhlctr9IgNqoBecP9eh1KZENexbtX+hs1xDrW8KnzXdWjvL3H1UGl8yWEheOKsFXxlrTquuGDudeEXuarxSyvqtPriIAi88frWt2MteLtoyKdW1GfWe9pCE3U9Ip32hF58mnp/UaR4kdV8tYXslWoKDSP/LK7o7lvaSKCN46hL7YehzmcD2eLq0XVxity0at6zrOL4N3e+NV1iGvsbAZvUfjLW8lc58WMlX/ZqEbeR8CSvCGydR3uH2vwzrvu2lobIXcOOYus1Uqdg7faj/Zpb6Lrph4q7GTPgToheKMWdNPTydRfO8daONBwvkP7dpmjY2UjAarSTfBuX/AknYrQ9lwNH72n4bMdvKXISBKdO01a6dzXIld5a0ro/aa6GQ59Xp1G0dhqg9QxcbD1mIyu2XWeCtM0sQVvAJ0RvAGgBnI7n7rsEFL41lSUTqrubPJJIwGSDh1vNqs0Clmd9KljrCEdHgAAxI7gDQAAAACAQ6xqDgAAAACAQwRvAAAAAAAcIngDAAAAAOAQwRsAAAAAAIcI3gAAAAAAOETwBgAAAADAIYI3AAAAAAAOEbwBAAAAAHCI4A0AAAAAgEMEbwAAAAAAHCJ4AwAAAADgEMEbAAAAAACHCN4AAAAAADhE8AYAAAAAwCGCNwAAAAAADhG8AQAAAABwiOANAAAAAIBDBG8AAAAAABwieAMAAAAA4BDBGwAAAAAAhwjeAAAAAAA4RPAGAAAAAMAhgjcAAAAAAA4RvAEAAAAAcCZJ/n8u1YV28c211gAAAABJRU5ErkJggg==";
+
+    var faviconLink = document.createElement("link");
+    faviconLink.rel  = "icon";
+    faviconLink.type = "image/png";
+    faviconLink.href = LOGO_DATA_URI;
+    document.head.appendChild(faviconLink);
+    /* ───── CATÁLOGO ───── */
+    var PRODUCTOS = [
+      { categoria: "ADEREZOS",    nombre: "ADEREZO RANCH EVENA FOODS 3.8L C/4" },
+      { categoria: "SALSAS",      nombre: "BLACKMIX EVENA FOODS 1L C/12" },
+      { categoria: "SALSAS",      nombre: "BLACKMIX EVENA FOODS 3.8L C/4" },
+      { categoria: "SALSAS",      nombre: "BLACKMIX EVENA FOODS 500ML C/12" },
+      { categoria: "JARABES",     nombre: "ENDULZANTE CURAZAO DRAC VALLEY 1L C/12" },
+      { categoria: "JARABES",     nombre: "ENDULZANTE GRANADINA DRAC VALLEY 1L C/12" },
+      { categoria: "JARABES",     nombre: "ENDULZANTE GRANADINA EL NACIONAL 1L C/12" },
+      { categoria: "JARABES",     nombre: "ENDULZANTE NATURAL DRAC VALLEY 1L C/12" },
+      { categoria: "JARABES",     nombre: "ENDULZANTE NATURAL DRAC VALLEY 5 LT" },
+      { categoria: "JARABES",     nombre: "ENDULZANTE NATURAL DRAC VALLEY 5L C/4" },
+      { categoria: "SALSAS",      nombre: "JUGO SAZONADOR EVENA FOODS 1L C/12" },
+      { categoria: "SALSAS",      nombre: "JUGO SAZONADOR EVENA FOODS 500ML C/12" },
+      { categoria: "LIMON DESH",  nombre: "LIMON DESHIDRATADO EVENA FOODS 750 GR C/25" },
+      { categoria: "PULPAS",      nombre: "PULPA FRESA T/A DRAC VALLEY 1L C/12" },
+      { categoria: "PULPAS",      nombre: "PULPA FRESA T/A DRAC VALLEY 500ML C/12" },
+      { categoria: "PULPAS",      nombre: "PULPA FRUTOS ROJOS T/A DRAC VALLEY 1L C/12" },
+      { categoria: "PULPAS",      nombre: "PULPA FRUTOS ROJOS T/A DRAC VALLEY 500ML C/12" },
+      { categoria: "PULPAS",      nombre: "PULPA MANGO T/A DRAC VALLEY 1L C/12" },
+      { categoria: "PULPAS",      nombre: "PULPA MANGO T/A DRAC VALLEY 500ML C/12" },
+      { categoria: "PULPAS",      nombre: "PULPA MARACUYA T/A DRAC VALLEY 1L C/12" },
+      { categoria: "PULPAS",      nombre: "PULPA MARACUYA T/A DRAC VALLEY 500ML C/12" },
+      { categoria: "PULPAS",      nombre: "PULPA TAMARINDO T/A DRAC VALLEY 1L C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA BBQ EVENA FOODS 1L C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA BBQ EVENA FOODS 3.8L C/4" },
+      { categoria: "SALSAS",      nombre: "SALSA BBQ EVENA FOODS 500ML C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA BBQ HABANERO EVENA FOODS 500ML C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA BLACK DEMON EVENA FOODS 500ML C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA BUFFALO EVENA FOODS 1L C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA BUFFALO EVENA FOODS 3.8L C/4" },
+      { categoria: "SALSAS",      nombre: "SALSA BUFFALO EVENA FOODS 500ML C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA INGLESA EVENA FOODS 1L C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA INGLESA EVENA FOODS 500ML C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA MANGO HABANERO EVENA FOODS 1L C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA MANGO HABANERO EVENA FOODS 3.8L C/4" },
+      { categoria: "SALSAS",      nombre: "SALSA MANGO HABANERO EVENA FOODS 500ML C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA PIÑA HOT EVENA FOODS 1L C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA PIÑA HOT EVENA FOODS 3.8L C/4" },
+      { categoria: "SALSAS",      nombre: "SALSA PIÑA HOT EVENA FOODS 500ML C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA TAMARINDO HOT EVENA FOODS 500ML C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA TAMARINDO HOT EVENA FOODS 1L C/12" },
+      { categoria: "SALSAS",      nombre: "SALSA TAMARINDO HOT EVENA FOODS 3.8L C/4" }
+    ];
+
+    /* ───── ESPECIFICACIONES PLO-01 ───── */
+    // orden = posición en la tarima, 1 = base (abajo), mayor = arriba
+    var ALTURA_MAX = 184; // cm máximos por tarima
+
+    var SPECS = {
+      "Galón 3.8L":       { cajasCama: 14, cajasTarima: 56,  camasTarima: 4, orden: 1, kgCaja: 16,   cmCama: 33.6 },
+      "Garrafa 5L":       { cajasCama: 9,  cajasTarima: 45,  camasTarima: 5, orden: 2, kgCaja: 25.5, cmCama: 33.6 },
+      "Salsa / Pulpa 1L": { cajasCama: 14, cajasTarima: 70,  camasTarima: 5, orden: 3, kgCaja: 13,   cmCama: 33.6 },
+      "Jarabe 1L":        { cajasCama: 15, cajasTarima: 75,  camasTarima: 5, orden: 4, kgCaja: 15,   cmCama: 33.6 },
+      "500 ml":           { cajasCama: 23, cajasTarima: 161, camasTarima: 7, orden: 5, kgCaja: 6,    cmCama: 26   },
+      "Limón Desh":       { cajasCama: 9,  cajasTarima: 45,  camasTarima: 5, orden: 6, kgCaja: 20,   cmCama: 33.6 }
+    };
+
+    var VALORES_ESPACIO = {
+      "Garrafa 5L":       1.56,
+      "Limón Desh":       1.56,
+      "500 ml":           0.51,
+      "Galón 3.8L":       1.0,
+      "Salsa / Pulpa 1L": 1.0,
+      "Jarabe 1L":        1.0
+    };
+    var LIMITE_MIXTA = 14.45;
+    var MAX_CAMAS    = 5;
+
+    var COLORES_TIPO = {
+      "Galón 3.8L":       { bg: "#dbeafe", text: "#1d4ed8", borde: "#93c5fd" },
+      "Garrafa 5L":       { bg: "#ffedd5", text: "#c2410c", borde: "#fb923c" },
+      "Salsa / Pulpa 1L": { bg: "#fee2e2", text: "#b91c1c", borde: "#fca5a5" },
+      "Jarabe 1L":        { bg: "#fef3c7", text: "#b45309", borde: "#fcd34d" },
+      "500 ml":           { bg: "#fce7f3", text: "#be185d", borde: "#f9a8d4" },
+      "Limón Desh":       { bg: "#fefce8", text: "#a16207", borde: "#fde047" }
+    };
+
+    function getTipo(nombre) {
+      if (/5\s*LT|5L\s*C\/4/i.test(nombre))        return "Garrafa 5L";
+      if (nombre.indexOf("3.8L") !== -1)            return "Galón 3.8L";
+      if (nombre.indexOf("500ML") !== -1)           return "500 ml";
+      if (nombre.indexOf("750 GR") !== -1)          return "Limón Desh";
+      if (
+        nombre.indexOf("ENDULZANTE") !== -1 ||
+        nombre.indexOf("CURAZAO") !== -1    ||
+        nombre.indexOf("GRANADINA") !== -1  ||
+        nombre.indexOf("BLACKMIX") !== -1
+      )                                              return "Jarabe 1L";
+      return "Salsa / Pulpa 1L";
+    }
+
+    function calcularKgTarima(tarima) {
+      return tarima.camas.reduce(function (total, cama) {
+        if (cama.tipo === "pura") return total + cama.cajas * SPECS[cama.tipoCaja].kgCaja;
+        return total + cama.items.reduce(function (s, it) { return s + it.cajas * SPECS[it.tipoCaja].kgCaja; }, 0);
+      }, 0);
+    }
+
+    function calcularCmTarima(tarima) {
+      return tarima.camas.reduce(function (total, cama) {
+        if (cama.tipo === "pura") return total + SPECS[cama.tipoCaja].cmCama;
+        // cama mixta: la altura la dicta la caja más alta que lleve
+        var maxCm = cama.items.reduce(function (m, it) { return Math.max(m, SPECS[it.tipoCaja].cmCama); }, 0);
+        return total + maxCm;
+      }, 0);
+    }
+
+    /* ───── ALGORITMO DE ARMADO ───── */
+    function fillMixedCama(pool) {
+      var items = [];
+      var espacioUsado = 0;
+      for (var i = 0; i < pool.length; i++) {
+        var entry = pool[i];
+        if (entry.cajas <= 0) continue;
+        var val   = VALORES_ESPACIO[entry.tipo];
+        var caben = Math.floor((LIMITE_MIXTA - espacioUsado) / val);
+        var tomar = Math.min(entry.cajas, caben);
+        if (tomar <= 0) continue;
+        items.push({ tipoCaja: entry.tipo, cajas: tomar, espacio: +(tomar * val).toFixed(2) });
+        espacioUsado = +(espacioUsado + tomar * val).toFixed(2);
+        entry.cajas -= tomar;
+      }
+      return { items: items, espacioUsado: espacioUsado };
+    }
+
+    function calcularResumenTarimas(pedido) {
+      var mapa = {};
+      pedido.forEach(function (item) {
+        var tipo = getTipo(item.nombre);
+        mapa[tipo] = (mapa[tipo] || 0) + item.cantidad;
+      });
+      return Object.keys(mapa).map(function (tipo) {
+        var cajasPedidas = mapa[tipo];
+        var spec = SPECS[tipo];
+        var tarimasPuras   = Math.floor(cajasPedidas / spec.cajasTarima);
+        var cajasSobrantes = cajasPedidas - tarimasPuras * spec.cajasTarima;
+        return Object.assign({ tipo: tipo, cajasPedidas: cajasPedidas, tarimasPuras: tarimasPuras, cajasSobrantes: cajasSobrantes }, spec);
+      }).sort(function (a, b) { return a.orden - b.orden; });
+    }
+
+    function calcularTarimas(resumenTarimas) {
+      var result = [];
+
+      // Regla 500 ml:
+      // - Pedido solo 500ml → hasta 7 camas (spec normal).
+      // - Pedido mixto → las tarimas COMPLETAS de 7 camas se arman igual;
+      //   los sobrantes (< 161 cajas) pasan a Fase 2 y acaban en una cama mixta.
+      //   No se expanden con camas extra: eso se reserva para la cama mixta de Fase 2.
+      var esSolo500ml = resumenTarimas.length === 1 && resumenTarimas[0].tipo === "500 ml";
+
+      // Fase 1: tarimas puras (tipo único, camas según spec)
+      resumenTarimas.forEach(function (row) {
+        var spec         = SPECS[row.tipo];
+        var kgPorCama    = spec.cajasCama * spec.kgCaja;
+        var es500mlMixto = row.tipo === "500 ml" && !esSolo500ml;
+
+        for (var i = 0; i < row.tarimasPuras; i++) {
+          var camas = [];
+          for (var c = 0; c < spec.camasTarima; c++) {
+            camas.push({ tipo: "pura", tipoCaja: row.tipo, cajas: spec.cajasCama });
+          }
+          // Reglas de peso/altura solo para tipos que NO sean 500ml en pedido mixto
+          if (!es500mlMixto) {
+            var kg = camas.length * kgPorCama;
+            var cm = camas.length * spec.cmCama;
+            while (kg < 900 && camas.length < 7 && row.cajasSobrantes >= spec.cajasCama
+                   && (kg + kgPorCama) <= 1250 && (cm + spec.cmCama) <= ALTURA_MAX) {
+              camas.push({ tipo: "pura", tipoCaja: row.tipo, cajas: spec.cajasCama });
+              row.cajasSobrantes -= spec.cajasCama;
+              kg += kgPorCama;
+              cm += spec.cmCama;
+            }
+          }
+          result.push({ camas: camas });
+        }
+      });
+
+      // Fase 2: sobrantes → camas puras + parciales, por tipo
+      var remaining = {};
+      resumenTarimas.forEach(function (row) {
+        if (row.cajasSobrantes <= 0) return;
+        var spec      = SPECS[row.tipo];
+        var pureCamas = Math.floor(row.cajasSobrantes / spec.cajasCama);
+        var partial   = row.cajasSobrantes % spec.cajasCama;
+        remaining[row.tipo] = { pureCamas: pureCamas, partial: partial, spec: spec };
+      });
+
+      // Fase 2a: si algún tipo NO-500ml junta MAX_CAMAS camas puras, tarima completa sin mezcla.
+      // 500ml en pedidos mixtos se maneja en Fase 2_500ml (nunca aquí).
+      Object.keys(remaining).forEach(function (tipo) {
+        if (tipo === "500 ml" && !esSolo500ml) return;
+        var info = remaining[tipo];
+        while (info.pureCamas >= MAX_CAMAS) {
+          var camas = [];
+          for (var i = 0; i < MAX_CAMAS; i++) camas.push({ tipo: "pura", tipoCaja: tipo, cajas: info.spec.cajasCama });
+          result.push({ camas: camas });
+          info.pureCamas -= MAX_CAMAS;
+        }
+      });
+
+      // Pool de parciales (se calcula antes de Fase 2_500ml para que ésta pueda consumirlos)
+      var partialPool = Object.keys(remaining)
+        .filter(function (t) { return remaining[t].partial > 0; })
+        .map(function (t) { return { tipo: t, cajas: remaining[t].partial, orden: remaining[t].spec.orden }; })
+        .sort(function (a, b) { return b.cajas - a.cajas || a.orden - b.orden; });
+
+      // Fase 2_500ml: sobrantes de 500ml en pedidos mixtos.
+      // Se arman tarimas con hasta (camasTarima-1) = 6 camas puras + 1 cama mixta con los parciales disponibles.
+      if (!esSolo500ml && remaining["500 ml"] && remaining["500 ml"].pureCamas > 0) {
+        var info500     = remaining["500 ml"];
+        var MAX500PURAS = SPECS["500 ml"].camasTarima - 1; // 6
+        while (info500.pureCamas > 0) {
+          var camas500 = [];
+          var tomar500 = Math.min(info500.pureCamas, MAX500PURAS);
+          for (var c5 = 0; c5 < tomar500; c5++) {
+            camas500.push({ tipo: "pura", tipoCaja: "500 ml", cajas: SPECS["500 ml"].cajasCama });
+          }
+          info500.pureCamas -= tomar500;
+          if (partialPool.some(function (e) { return e.cajas > 0; })) {
+            var filled500 = fillMixedCama(partialPool);
+            if (filled500.items.length > 0) {
+              var sorted500 = filled500.items.slice().sort(function (a, b) { return SPECS[a.tipoCaja].orden - SPECS[b.tipoCaja].orden; });
+              camas500.push({ tipo: "mixta", items: sorted500, espacioUsado: filled500.espacioUsado });
+            }
+          }
+          result.push({ camas: camas500 });
+        }
+      }
+
+      // Fase 2b: combinar las camas puras restantes de tipos NO-500ml en bloques.
+      // Si el pool de parciales ya fue consumido por la tarima 500ml, los bloques usan MAX_CAMAS
+      // (no necesitan reservar slot para mixta), lo que permite agrupar más camas en menos tarimas.
+      var tiposConPure = Object.keys(remaining)
+        .filter(function (t) { return remaining[t].pureCamas > 0 && !(t === "500 ml" && !esSolo500ml); })
+        .sort(function (a, b) {
+          return remaining[b].pureCamas - remaining[a].pureCamas || remaining[a].spec.orden - remaining[b].spec.orden;
+        });
+
+      var flatUnits = [];
+      tiposConPure.forEach(function (tipo) {
+        for (var i = 0; i < remaining[tipo].pureCamas; i++) flatUnits.push(tipo);
+      });
+
+      var hayParciales = partialPool.some(function (e) { return e.cajas > 0; });
+      var tamBloque    = hayParciales ? (MAX_CAMAS - 1) : MAX_CAMAS;
+      var bloques = [];
+      for (var i = 0; i < flatUnits.length; i += tamBloque) {
+        bloques.push(flatUnits.slice(i, i + tamBloque));
+      }
+
+      // Fase 2c: prioridad de conversión Garrafa 5L → cama mixta, usando el pool de parciales
+      //   ANTES de que Fase 3 use ese mismo pool para su cama mixta genérica de cada bloque.
+      //   Prioridad 1: 6 × 5L + 7 × 1L  (consume más 1L; regresa 3 garrafas al pool)
+      //   Prioridad 2: 9 × 5L + 3 × 1L
+      //   Sin suficientes 1L en el pool (<3): deja la cama pura
+      var TIPOS_1L_PREF = ["Salsa / Pulpa 1L", "Jarabe 1L"];
+      function convertirGarrafa5L() {
+        var entry1L = null, max1L = 0;
+        TIPOS_1L_PREF.forEach(function (t) {
+          var e = partialPool.filter(function (x) { return x.tipo === t; })[0];
+          if (e && e.cajas > max1L) { max1L = e.cajas; entry1L = e; }
+        });
+        if (!entry1L || max1L < 3) return null; // Sin suficientes 1L, dejar pura
+
+        var cajas5L, cajas1L;
+        if (max1L >= 7) {
+          cajas5L = 6; cajas1L = 7;
+          var entry5L = partialPool.filter(function (x) { return x.tipo === "Garrafa 5L"; })[0];
+          if (entry5L) { entry5L.cajas += 3; } else { partialPool.push({ tipo: "Garrafa 5L", cajas: 3, orden: SPECS["Garrafa 5L"].orden }); }
+        } else {
+          cajas5L = 9; cajas1L = 3;
+        }
+        entry1L.cajas -= cajas1L;
+
+        return {
+          tipo: "mixta",
+          items: [
+            { tipoCaja: "Garrafa 5L", cajas: cajas5L, espacio: cajas5L },
+            { tipoCaja: entry1L.tipo, cajas: cajas1L, espacio: cajas1L }
+          ],
+          espacioUsado: cajas5L + cajas1L
+        };
+      }
+
+      // Fase 3: cada bloque → tarima con camas puras (ordenadas por estiba) + 1 cama mixta del pool
+      bloques.forEach(function (bloque) {
+        var ordenado = bloque.slice().sort(function (a, b) { return SPECS[a].orden - SPECS[b].orden; });
+        var camas = ordenado.map(function (tipo) {
+          if (tipo === "Garrafa 5L") {
+            var convertida = convertirGarrafa5L();
+            if (convertida) return convertida;
+          }
+          return { tipo: "pura", tipoCaja: tipo, cajas: SPECS[tipo].cajasCama };
+        });
+
+        if (partialPool.some(function (e) { return e.cajas > 0; })) {
+          var filled = fillMixedCama(partialPool);
+          if (filled.items.length > 0) {
+            var sortedItems = filled.items.slice().sort(function (a, b) { return SPECS[a.tipoCaja].orden - SPECS[b.tipoCaja].orden; });
+            camas.push({ tipo: "mixta", items: sortedItems, espacioUsado: filled.espacioUsado });
+          }
+        }
+        result.push({ camas: camas });
+      });
+
+      // Fase 4: lo que sobre del pool de parciales
+      var pendientes = [];
+      if (partialPool.some(function (e) { return e.cajas > 0; })) {
+        if (result.length === 0) {
+          while (partialPool.some(function (e) { return e.cajas > 0; })) {
+            var filled2 = fillMixedCama(partialPool);
+            if (filled2.items.length === 0) break;
+            var sortedItems2 = filled2.items.slice().sort(function (a, b) { return SPECS[a.tipoCaja].orden - SPECS[b.tipoCaja].orden; });
+            result.push({ camas: [{ tipo: "mixta", items: sortedItems2, espacioUsado: filled2.espacioUsado }] });
+          }
+        } else {
+          partialPool.forEach(function (e) {
+            if (e.cajas > 0) pendientes.push({ tipo: e.tipo, cajas: e.cajas });
+          });
+        }
+      }
+
+      // (La regla de Garrafa 5L se movió a Fase 2c, antes de Fase 3 — ver arriba)
+
+      // Consolidación de camas mixtas:
+      // Si una tarima tiene 1–2 camas mixtas, moverlas a la tarima con menos camas totales
+      // para dejar tarimas completas con puras únicamente.
+      (function () {
+        function limiteMax(tarima) {
+          var tiene500 = tarima.camas.some(function (c) { return c.tipo === "pura" && c.tipoCaja === "500 ml"; });
+          return tiene500 ? SPECS["500 ml"].camasTarima : MAX_CAMAS;
+        }
+        // Una sola pasada por índice fijo: cada tarima se evalúa como posible origen
+        // como máximo una vez, así que siempre termina (nada de reiniciar/oscilar).
+        for (var si = 0; si < result.length; si++) {
+          var src    = result[si];
+          var mixtas = src.camas.filter(function (c) { return c.tipo === "mixta"; });
+          if (mixtas.length < 1 || mixtas.length > 2) continue;
+
+          // Tarima con menos camas que quepa las mixtas y que no sea la misma fuente
+          var dstIdx = -1, minTotal = Infinity;
+          for (var di = 0; di < result.length; di++) {
+            if (di === si) continue;
+            var dst = result[di];
+            var cap = limiteMax(dst);
+            if (dst.camas.length + mixtas.length <= cap && dst.camas.length < minTotal) {
+              minTotal = dst.camas.length;
+              dstIdx   = di;
+            }
+          }
+          if (dstIdx === -1) continue;
+
+          // Mover mixtas al destino
+          mixtas.forEach(function (m) { result[dstIdx].camas.push(m); });
+          src.camas = src.camas.filter(function (c) { return c.tipo !== "mixta"; });
+        }
+        // Limpiar tarimas que quedaron sin camas tras mover todas sus mixtas
+        for (var i = result.length - 1; i >= 0; i--) {
+          if (result[i].camas.length === 0) result.splice(i, 1);
+        }
+      })();
+
+      return {
+        tarimas: result.map(function (t, i) { return Object.assign({ numero: i + 1 }, t); }),
+        pendientes: pendientes
+      };
+    }
+
+    /* ───── ESTADO ───── */
+    // Pedido de prueba — pulsa "Limpiar" para vaciarlo
+    var PEDIDO_DEMO = [
+      { categoria: "ADEREZOS",        nombre: "ADEREZO RANCH EVENA FOODS 3.8L C/4", cantidad: 88 },
+      { categoria: "SALSAS",          nombre: "BLACKMIX EVENA FOODS 1L C/12", cantidad: 6 },
+      { categoria: "SALSAS",          nombre: "BLACKMIX EVENA FOODS 3.8L C/4", cantidad: 26 },
+      { categoria: "SALSAS",          nombre: "BLACKMIX EVENA FOODS 500ML C/12", cantidad: 180 },
+      { categoria: "JARABES",         nombre: "ENDULZANTE CURAZAO DRAC VALLEY 1L C/12", cantidad: 189 },
+      { categoria: "JARABES",         nombre: "ENDULZANTE GRANADINA DRAC VALLEY 1L C/12", cantidad: 155 },
+      { categoria: "JARABES",         nombre: "ENDULZANTE GRANADINA EL NACIONAL 1L C/12", cantidad: 104 },
+      { categoria: "JARABES",         nombre: "ENDULZANTE NATURAL DRAC VALLEY 1L C/12", cantidad: 5 },
+      { categoria: "JARABES",         nombre: "ENDULZANTE NATURAL DRAC VALLEY 5 LT", cantidad: 200 },
+      { categoria: "JARABES",         nombre: "ENDULZANTE NATURAL DRAC VALLEY 5L C/4", cantidad: 130 },
+      { categoria: "SALSAS",          nombre: "JUGO SAZONADOR EVENA FOODS 1L C/12", cantidad: 111 },
+      { categoria: "SALSAS",          nombre: "JUGO SAZONADOR EVENA FOODS 500ML C/12", cantidad: 144 },
+      { categoria: "LIMON DESH",      nombre: "LIMON DESHIDRATADO EVENA FOODS 750 GR C/25", cantidad: 151 },
+      { categoria: "PULPAS",          nombre: "PULPA FRESA T/A DRAC VALLEY 1L C/12", cantidad: 167 },
+      { categoria: "PULPAS",          nombre: "PULPA FRESA T/A DRAC VALLEY 500ML C/12", cantidad: 231 },
+      { categoria: "PULPAS",          nombre: "PULPA FRUTOS ROJOS T/A DRAC VALLEY 1L C/12", cantidad: 93 },
+      { categoria: "PULPAS",          nombre: "PULPA FRUTOS ROJOS T/A DRAC VALLEY 500ML C/12", cantidad: 130 },
+      { categoria: "PULPAS",          nombre: "PULPA MANGO T/A DRAC VALLEY 1L C/12", cantidad: 47 },
+      { categoria: "PULPAS",          nombre: "PULPA MANGO T/A DRAC VALLEY 500ML C/12", cantidad: 179 },
+      { categoria: "PULPAS",          nombre: "PULPA MARACUYA T/A DRAC VALLEY 1L C/12", cantidad: 137 },
+      { categoria: "PULPAS",          nombre: "PULPA MARACUYA T/A DRAC VALLEY 500ML C/12", cantidad: 201 },
+      { categoria: "PULPAS",          nombre: "PULPA TAMARINDO T/A DRAC VALLEY 1L C/12", cantidad: 39 },
+      { categoria: "SALSAS",          nombre: "SALSA BBQ EVENA FOODS 1L C/12", cantidad: 11 },
+      { categoria: "SALSAS",          nombre: "SALSA BBQ EVENA FOODS 3.8L C/4", cantidad: 208 },
+      { categoria: "SALSAS",          nombre: "SALSA BBQ EVENA FOODS 500ML C/12", cantidad: 222 },
+      { categoria: "SALSAS",          nombre: "SALSA BBQ HABANERO EVENA FOODS 500ML C/12", cantidad: 125 },
+      { categoria: "SALSAS",          nombre: "SALSA BLACK DEMON EVENA FOODS 500ML C/12", cantidad: 7 },
+      { categoria: "SALSAS",          nombre: "SALSA BUFFALO EVENA FOODS 1L C/12", cantidad: 186 },
+      { categoria: "SALSAS",          nombre: "SALSA BUFFALO EVENA FOODS 3.8L C/4", cantidad: 46 },
+      { categoria: "SALSAS",          nombre: "SALSA BUFFALO EVENA FOODS 500ML C/12", cantidad: 54 },
+      { categoria: "SALSAS",          nombre: "SALSA INGLESA EVENA FOODS 1L C/12", cantidad: 134 },
+      { categoria: "SALSAS",          nombre: "SALSA INGLESA EVENA FOODS 500ML C/12", cantidad: 168 },
+      { categoria: "SALSAS",          nombre: "SALSA MANGO HABANERO EVENA FOODS 1L C/12", cantidad: 218 },
+      { categoria: "SALSAS",          nombre: "SALSA MANGO HABANERO EVENA FOODS 3.8L C/4", cantidad: 36 },
+      { categoria: "SALSAS",          nombre: "SALSA MANGO HABANERO EVENA FOODS 500ML C/12", cantidad: 65 },
+      { categoria: "SALSAS",          nombre: "SALSA PIÑA HOT EVENA FOODS 1L C/12", cantidad: 82 },
+      { categoria: "SALSAS",          nombre: "SALSA PIÑA HOT EVENA FOODS 3.8L C/4", cantidad: 179 },
+      { categoria: "SALSAS",          nombre: "SALSA PIÑA HOT EVENA FOODS 500ML C/12", cantidad: 145 },
+      { categoria: "SALSAS",          nombre: "SALSA TAMARINDO HOT EVENA FOODS 500ML C/12", cantidad: 104 },
+      { categoria: "SALSAS",          nombre: "SALSA TAMARINDO HOT EVENA FOODS 1L C/12", cantidad: 150 },
+      { categoria: "SALSAS",          nombre: "SALSA TAMARINDO HOT EVENA FOODS 3.8L C/4", cantidad: 227 }
+    ];
+
+    var state = {
+      pedido: PEDIDO_DEMO.slice(),   // .slice() clona el array; "Limpiar" lo vacía sin tocar PEDIDO_DEMO
+      vistaTabla: false,
+      busqueda: "",
+      cantidad: "",
+      seleccionado: null,
+      mostrarDrop: false,
+      highlightIdx: 0,
+      tarimas: null,     // armado guardado; null = recalcular en siguiente render
+      pendientes: null
+    };
+
+    /* ───── DRAG & DROP ───── */
+    var dragSrc  = null; // { tIdx, di } — arrastre de cama completa
+    var dragTipo = null; // { tIdx, di, tipo } — arrastre de tipo entre camas mixtas
+
+    function moverTipoEntreCamas(srcTIdx, srcDi, dstTIdx, dstDi, tipo) {
+      if (srcTIdx === dstTIdx && srcDi === dstDi) return;
+      var srcT = state.tarimas[srcTIdx];
+      var dstT = state.tarimas[dstTIdx];
+      if (!srcT || !dstT) return;
+      var srcSi = srcT.camas.length - 1 - srcDi;
+      var dstSi = dstT.camas.length - 1 - dstDi;
+      var srcCama = srcT.camas[srcSi];
+      var dstCama = dstT.camas[dstSi];
+      if (!srcCama || srcCama.tipo !== "mixta") return;
+      if (!dstCama || dstCama.tipo !== "mixta") return;
+      var srcItem = srcCama.items.find(function (it) { return it.tipoCaja === tipo; });
+      if (!srcItem) return;
+      // Quitar del origen
+      srcCama.items = srcCama.items.filter(function (it) { return it.tipoCaja !== tipo; });
+      srcCama.espacioUsado = srcCama.items.reduce(function (s, it) { return s + it.espacio; }, 0);
+      // Agregar al destino (merge si ya existe el mismo tipo)
+      var dstItem = dstCama.items.find(function (it) { return it.tipoCaja === tipo; });
+      if (dstItem) {
+        dstItem.cajas   += srcItem.cajas;
+        dstItem.espacio += srcItem.espacio;
+      } else {
+        dstCama.items.push({ tipoCaja: tipo, cajas: srcItem.cajas, espacio: srcItem.espacio });
+        dstCama.items.sort(function (a, b) { return SPECS[a.tipoCaja].orden - SPECS[b.tipoCaja].orden; });
+      }
+      dstCama.espacioUsado += srcItem.espacio;
+      // Si la cama origen quedó sin items, eliminarla
+      if (srcCama.items.length === 0) srcT.camas.splice(srcSi, 1);
+      // Limpiar tarimas vacías y renumerar
+      state.tarimas = state.tarimas.filter(function (t) { return t.camas.length > 0; });
+      state.tarimas.forEach(function (t, i) { t.numero = i + 1; });
+      render();
+    }
+
+    function crearNuevaTarima(srcTIdx, srcDi) {
+      var srcT    = state.tarimas[srcTIdx];
+      var srcDisp = srcT.camas.slice().reverse();
+      var cama    = srcDisp.splice(srcDi, 1)[0];
+      srcT.camas  = srcDisp.slice().reverse();
+      state.tarimas = state.tarimas.filter(function (t) { return t.camas.length > 0; });
+      state.tarimas.push({ camas: [cama], numero: state.tarimas.length + 1 });
+      state.tarimas.forEach(function (t, i) { t.numero = i + 1; });
+      render();
+    }
+
+    function quitarCajaMixta(tIdx, di, tipo) {
+      var tarima   = state.tarimas[tIdx];
+      var disp     = tarima.camas.slice().reverse();
+      var cama     = disp[di];
+      var item     = cama.items.find(function (it) { return it.tipoCaja === tipo; });
+      if (!item || item.cajas <= 0) return;
+      item.cajas  -= 1;
+      item.espacio = +((item.cajas * VALORES_ESPACIO[tipo]).toFixed(2));
+      var itemVacio = item.cajas === 0; // última caja de este tipo
+      cama.items   = cama.items.filter(function (it) { return it.cajas > 0; });
+      cama.espacioUsado = +(cama.items.reduce(function (s, it) { return s + it.espacio; }, 0).toFixed(2));
+      if (cama.items.length === 0) disp.splice(di, 1);
+      tarima.camas = disp.slice().reverse();
+      state.tarimas = state.tarimas.filter(function (t) { return t.camas.length > 0; });
+      state.tarimas.forEach(function (t, i) { t.numero = i + 1; });
+      // Acumular la caja en pendientes
+      var pend = (state.pendientes || []).find(function (p) { return p.tipo === tipo; });
+      if (pend) { pend.cajas += 1; } else { state.pendientes.push({ tipo: tipo, cajas: 1 }); }
+      // Si era la última caja de este tipo en la cama, crear tarima extra de mix
+      // con todas las cajas acumuladas en pendientes de ese tipo
+      if (itemVacio) {
+        var pendTipo = (state.pendientes || []).find(function (p) { return p.tipo === tipo; });
+        if (pendTipo && pendTipo.cajas > 0) {
+          var cajasExtra  = pendTipo.cajas;
+          var espExtra    = +((cajasExtra * VALORES_ESPACIO[tipo]).toFixed(2));
+          pendTipo.cajas  = 0;
+          state.pendientes = state.pendientes.filter(function (p) { return p.cajas > 0; });
+          state.tarimas.push({
+            numero: state.tarimas.length + 1,
+            camas: [{ tipo: "mixta", items: [{ tipoCaja: tipo, cajas: cajasExtra, espacio: espExtra }], espacioUsado: espExtra }]
+          });
+        }
+      }
+      render();
+    }
+
+    function agregarCajaMixta(tIdx, di, tipo) {
+      var pend = (state.pendientes || []).find(function (p) { return p.tipo === tipo && p.cajas > 0; });
+      if (!pend) return;
+      var tarima = state.tarimas[tIdx];
+      var disp   = tarima.camas.slice().reverse();
+      var cama   = disp[di];
+      var item   = cama.items.find(function (it) { return it.tipoCaja === tipo; });
+      var val    = VALORES_ESPACIO[tipo];
+      if (item) {
+        item.cajas  += 1;
+        item.espacio = +((item.cajas * val).toFixed(2));
+      } else {
+        cama.items.push({ tipoCaja: tipo, cajas: 1, espacio: +(val.toFixed(2)) });
+        cama.items.sort(function (a, b) { return SPECS[a.tipoCaja].orden - SPECS[b.tipoCaja].orden; });
+      }
+      cama.espacioUsado = +(cama.items.reduce(function (s, it) { return s + it.espacio; }, 0).toFixed(2));
+      tarima.camas = disp.slice().reverse();
+      pend.cajas -= 1;
+      state.pendientes = state.pendientes.filter(function (p) { return p.cajas > 0; });
+      render();
+    }
+
+    function moveCama(srcTIdx, srcDi, dstTIdx, dstDi) {
+      if (srcTIdx === dstTIdx && srcDi === dstDi) return;
+      var srcT    = state.tarimas[srcTIdx];
+      var dstT    = state.tarimas[dstTIdx];
+      var srcDisp = srcT.camas.slice().reverse();
+      var dstDisp = dstT.camas.slice().reverse();
+      var cama    = srcDisp.splice(srcDi, 1)[0];
+      if (srcTIdx === dstTIdx) {
+        srcDisp.splice(dstDi > srcDi ? dstDi - 1 : dstDi, 0, cama);
+        srcT.camas = srcDisp.slice().reverse();
+      } else {
+        srcT.camas = srcDisp.slice().reverse();
+        dstDisp.splice(dstDi, 0, cama);
+        dstT.camas = dstDisp.slice().reverse();
+      }
+      state.tarimas = state.tarimas.filter(function (t) { return t.camas.length > 0; });
+      state.tarimas.forEach(function (t, i) { t.numero = i + 1; });
+      render();
+    }
+
+    /* ───── HELPERS ───── */
+    function esc(s) {
+      return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    function getSugerencias() {
+      var q = state.busqueda.trim().toLowerCase();
+      if (!q) return [];
+      return PRODUCTOS.filter(function (p) { return p.nombre.toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
+    }
+
+    /* ───── ACCIONES ───── */
+    function elegirProducto(p) {
+      state.seleccionado = p;
+      state.busqueda = p.nombre;
+      state.mostrarDrop = false;
+      state.highlightIdx = 0;
+      render();
+      var el = document.getElementById("input-cantidad");
+      if (el) el.focus();
+    }
+
+    function agregarAlPedido() {
+      var cant = Number(state.cantidad);
+      if (!state.seleccionado || !state.cantidad || cant <= 0) return;
+      var idx = state.pedido.findIndex(function (i) { return i.nombre === state.seleccionado.nombre; });
+      if (idx !== -1) {
+        state.pedido[idx].cantidad += cant;
+      } else {
+        state.pedido.push({ nombre: state.seleccionado.nombre, categoria: state.seleccionado.categoria, cantidad: cant });
+      }
+      state.busqueda = ""; state.cantidad = ""; state.seleccionado = null;
+      render();
+      var el = document.getElementById("input-busqueda");
+      if (el) el.focus();
+    }
+
+    function quitarItem(idx) {
+      state.pedido.splice(idx, 1);
+      render();
+    }
+
+    /* ───── RENDER ───── */
+    var root = document.getElementById("root");
+    // true durante toda la reconstrucción del DOM: evita que el blur/focus
+    // disparado por quitar/poner el input viejo (innerHTML) dispare los handlers
+    var isRendering = false;
+
+    function render() {
+      isRendering = true;
+      var active = document.activeElement;
+      var activeId = active && active.id;
+      var selStart, selEnd;
+      if (active && typeof active.selectionStart === "number") {
+        selStart = active.selectionStart;
+        selEnd   = active.selectionEnd;
+      }
+
+      root.innerHTML = state.vistaTabla ? renderVistaTabla() : renderVistaPedido();
+      attachListeners();
+
+      if (activeId) {
+        var el = document.getElementById(activeId);
+        if (el) {
+          el.focus();
+          if (selStart != null) {
+            try { el.setSelectionRange(selStart, selEnd); } catch (e) {}
+          }
+        }
+      }
+      isRendering = false;
+    }
+
+    function renderVistaPedido() {
+      var sugerencias = getSugerencias();
+      var totalItems = state.pedido.reduce(function (s, i) { return s + i.cantidad; }, 0);
+      var puedeAgregar = state.seleccionado && state.cantidad && Number(state.cantidad) > 0;
+
+      var html = '';
+      html += '<div class="header-bar">';
+      html += '  <div class="brand"><img src="' + LOGO_DATA_URI + '" alt="Evena Foods" /><div><h1>Evena Foods</h1><p>Tomar pedido</p></div></div>';
+      if (state.pedido.length > 0) {
+        html += '  <div class="header-badge"><div class="num">' + state.pedido.length + '</div><div class="lbl">' + (state.pedido.length === 1 ? 'producto' : 'productos') + '</div></div>';
+      }
+      html += '</div>';
+
+      html += '<div class="card">';
+      html += '  <div class="field-group">';
+      html += '    <label class="label">Producto</label>';
+      html += '    <input id="input-busqueda" class="input" type="text" placeholder="Buscar producto..." value="' + esc(state.busqueda) + '" autocomplete="off" style="' + (state.seleccionado ? 'background:var(--ev-orange-tint);' : '') + '" />';
+      if (state.mostrarDrop && sugerencias.length > 0) {
+        html += '    <div class="dropdown">';
+        sugerencias.forEach(function (p, i) {
+          html += '      <div class="dropdown-item' + (i === state.highlightIdx ? ' active' : '') + '" data-sugerencia-idx="' + i + '">';
+          html += '        <div><div class="nombre">' + esc(p.nombre) + '</div><div class="cat">' + esc(p.categoria) + '</div></div>';
+          html += '        <span class="tipo-chip">' + esc(getTipo(p.nombre)) + '</span>';
+          html += '      </div>';
+        });
+        html += '    </div>';
+      }
+      html += '  </div>';
+
+      html += '  <div class="row">';
+      html += '    <div class="grow">';
+      html += '      <label class="label">Cantidad (cajas)</label>';
+      html += '      <input id="input-cantidad" class="input" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" value="' + esc(state.cantidad) + '" />';
+      html += '    </div>';
+      html += '    <div style="display:flex;align-items:flex-end;">';
+      html += '      <button id="btn-agregar" class="btn btn-primary"' + (puedeAgregar ? '' : ' disabled') + '>+ Agregar</button>';
+      html += '    </div>';
+      html += '  </div>';
+      html += '</div>';
+
+      if (state.pedido.length === 0) {
+        html += '<div class="empty-state"><div class="icon">📋</div><div class="title">El pedido está vacío</div><div class="sub">Busca un producto y agrega la cantidad</div></div>';
+      } else {
+        html += '<div class="table-card">';
+        html += '  <div class="table-head" style="grid-template-columns:1fr 90px 120px 36px;">';
+        html += '    <span>Producto</span><span class="center">Cant.</span><span class="center">Tipo caja</span><span></span>';
+        html += '  </div>';
+        state.pedido.forEach(function (item, idx) {
+          html += '  <div class="pedido-row">';
+          html += '    <div><div class="nombre">' + esc(item.nombre) + '</div><div class="cat">' + esc(item.categoria) + '</div></div>';
+          html += '    <div class="cant">' + item.cantidad + '</div>';
+          html += '    <div class="tipo-chip-cell"><span class="tipo-chip">' + esc(getTipo(item.nombre)) + '</span></div>';
+          html += '    <button class="remove-btn" data-quitar-idx="' + idx + '">✕</button>';
+          html += '  </div>';
+        });
+        html += '  <div class="footer-row">';
+        html += '    <span class="info">' + state.pedido.length + ' ' + (state.pedido.length === 1 ? 'producto' : 'productos') + ' · ' + totalItems + ' cajas</span>';
+        html += '    <div class="footer-actions">';
+        html += '      <button id="btn-limpiar" class="btn btn-outline-danger">Limpiar</button>';
+        html += '      <button id="btn-armar" class="btn btn-dark">Armar pedido →</button>';
+        html += '    </div>';
+        html += '  </div>';
+        html += '</div>';
+      }
+
+      return html;
+    }
+
+    /* ───── GENERADOR PDF ───── */
+    function generarPDF() {
+      var resumen    = calcularResumenTarimas(state.pedido);
+      var tarimas    = state.tarimas || [];
+      var pendientes = state.pendientes || [];
+      var fecha      = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+      var totalCajas = state.pedido.reduce(function (s, i) { return s + i.cantidad; }, 0);
+
+      var css = [
+        'body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#000;margin:0;padding:20px;}',
+        'h1{font-size:20px;margin:0;}',
+        'h2{font-size:13px;margin:18px 0 7px;border-bottom:2px solid #5F5F5E;padding-bottom:4px;color:#5F5F5E;text-transform:uppercase;letter-spacing:.5px;}',
+        'table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:11px;}',
+        'th{background:#5F5F5E;color:#fff;padding:5px 8px;text-align:left;}',
+        'td{padding:4px 8px;border-bottom:1px solid #DCDCDB;}',
+        'tr:nth-child(even) td{background:#ECECEC;}',
+        '.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;border-bottom:3px solid #5F5F5E;padding-bottom:10px;}',
+        '.stats{text-align:right;font-size:11px;color:#5F5F5E;line-height:1.6;}',
+        '.tarima{page-break-inside:avoid;border:1px solid #DCDCDB;border-radius:4px;margin-bottom:10px;overflow:hidden;}',
+        '.tarima-hdr{background:#5F5F5E;color:#fff;padding:7px 12px;font-weight:bold;font-size:11px;display:flex;justify-content:space-between;}',
+        '.cama-row{padding:5px 12px;border-bottom:1px solid #ECECEC;display:flex;align-items:center;gap:10px;}',
+        '.cama-row:last-child{border-bottom:none;}',
+        '.cama-row:nth-child(even){background:#ECECEC;}',
+        '.lbl{font-weight:bold;font-size:10px;min-width:38px;color:#5F5F5E;}',
+        '.badge{display:inline-block;background:#ECECEC;border-radius:3px;padding:1px 6px;font-size:9px;font-weight:bold;}',
+        '.badge-mix{background:#FFF4E8;color:#B36A1A;}',
+        '.pend-nota{font-size:10px;color:#B36A1A;}',
+        '@media print{body{padding:0;}@page{margin:14mm;}}'
+      ].join('');
+
+      var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">';
+      h += '<title>Evena Foods – Plan de Tarimas ' + fecha + '</title>';
+      h += '<style>' + css + '</style></head><body>';
+
+      // Encabezado
+      h += '<div class="hdr">';
+      h += '<div style="display:flex;align-items:center;gap:14px;"><img src="' + LOGO_DATA_URI + '" style="height:40px;width:auto;" alt="Evena Foods" /><div><h1>Evena Foods</h1><div style="color:#5F5F5E;margin-top:3px;">Plan de armado de tarimas &nbsp;·&nbsp; PLO-01</div></div></div>';
+      h += '<div class="stats">';
+      h += '<div>' + fecha + '</div>';
+      h += '<div><strong>' + state.pedido.length + '</strong> productos &nbsp;&nbsp; <strong>' + totalCajas + '</strong> cajas &nbsp;&nbsp; <strong>' + tarimas.length + '</strong> tarimas</div>';
+      h += '</div></div>';
+
+      // Sección 1: Lista de productos
+      h += '<h2>Lista de productos</h2>';
+      h += '<table><thead><tr><th>#</th><th>Producto</th><th>Categoría</th><th>Tipo de caja</th><th style="text-align:center;">Cajas</th></tr></thead><tbody>';
+      state.pedido.forEach(function (item, i) {
+        h += '<tr>';
+        h += '<td style="color:#9A9A99;">' + (i + 1) + '</td>';
+        h += '<td>' + item.nombre + '</td>';
+        h += '<td>' + (item.categoria || '—') + '</td>';
+        h += '<td>' + getTipo(item.nombre) + '</td>';
+        h += '<td style="text-align:center;font-weight:bold;">' + item.cantidad + '</td>';
+        h += '</tr>';
+      });
+      h += '</tbody></table>';
+
+      // Sección 2: Resumen por tipo
+      h += '<h2>Resumen por tipo de caja</h2>';
+      h += '<table><thead><tr><th>Tipo de caja</th><th style="text-align:center;">Cajas / Cama</th><th style="text-align:center;">Cajas / Tarima</th><th style="text-align:center;">Cajas pedidas</th><th style="text-align:center;">Tarimas puras</th><th style="text-align:center;">Sobrantes</th></tr></thead><tbody>';
+      resumen.forEach(function (row) {
+        h += '<tr>';
+        h += '<td>' + row.tipo + '</td>';
+        h += '<td style="text-align:center;">' + row.cajasCama + '</td>';
+        h += '<td style="text-align:center;">' + row.cajasTarima + '</td>';
+        h += '<td style="text-align:center;font-weight:bold;">' + row.cajasPedidas + '</td>';
+        h += '<td style="text-align:center;">' + row.tarimasPuras + '</td>';
+        h += '<td style="text-align:center;color:' + (row.cajasSobrantes > 0 ? '#B36A1A' : '#9A9A99') + ';">' + row.cajasSobrantes + '</td>';
+        h += '</tr>';
+      });
+      h += '</tbody></table>';
+
+      // Sección 3: Distribución de tarimas
+      h += '<h2 style="margin-top:24px;">Distribución de tarimas</h2>';
+
+      tarimas.forEach(function (tarima) {
+        var totalCajasTarima = tarima.camas.reduce(function (s, c) {
+          return s + (c.tipo === 'pura' ? c.cajas : c.items.reduce(function (a, it) { return a + it.cajas; }, 0));
+        }, 0);
+        var kg  = calcularKgTarima(tarima);
+        var cm  = calcularCmTarima(tarima);
+        var camasDisplay = tarima.camas.slice().reverse();
+        var numCamas = tarima.camas.length;
+
+        h += '<div class="tarima">';
+        h += '<div class="tarima-hdr">';
+        h += '<span>Tarima #' + tarima.numero + '</span>';
+        h += '<span>' + numCamas + ' camas &nbsp;&nbsp; ' + totalCajasTarima + ' cajas &nbsp;&nbsp; ' + kg.toLocaleString('es-MX') + ' kg &nbsp;&nbsp; ' + cm.toFixed(1) + ' cm</span>';
+        h += '</div>';
+
+        camasDisplay.forEach(function (cama, di) {
+          var numCamaReal = numCamas - di;
+          var esTapa = di === 0;
+          var esBase = numCamaReal === 1;
+          var labelTxt = esTapa ? 'TAPA' : (esBase ? 'BASE' : 'C.' + numCamaReal);
+
+          h += '<div class="cama-row">';
+          h += '<span class="lbl">' + labelTxt + '</span>';
+          if (cama.tipo === 'pura') {
+            h += '<span style="flex:1;">' + cama.tipoCaja + '</span>';
+            h += '<span class="badge">' + cama.cajas + ' cajas</span>';
+          } else {
+            var mixDesc = cama.items.map(function (it) { return it.cajas + ' × ' + it.tipoCaja; }).join(' &nbsp;+&nbsp; ');
+            h += '<span style="flex:1;">' + mixDesc + '</span>';
+            h += '<span class="badge badge-mix">MIXTA</span>';
+          }
+          h += '</div>';
+        });
+
+        h += '</div>';
+      });
+
+      // Pendientes
+      if (pendientes.length > 0) {
+        h += '<h2>Cajas pendientes</h2>';
+        h += '<table><thead><tr><th>Tipo</th><th style="text-align:center;">Cajas</th><th>Nota</th></tr></thead><tbody>';
+        pendientes.forEach(function (p) {
+          var faltan = SPECS[p.tipo].cajasCama - p.cajas;
+          h += '<tr>';
+          h += '<td>' + p.tipo + '</td>';
+          h += '<td style="text-align:center;">' + p.cajas + '</td>';
+          h += '<td class="pend-nota">Faltan ' + faltan + ' cajas para completar una cama</td>';
+          h += '</tr>';
+        });
+        h += '</tbody></table>';
+      }
+
+      h += '<div style="margin-top:30px;border-top:1px solid #DCDCDB;padding-top:8px;font-size:9px;color:#9A9A99;">Generado por Evena Foods · PLO-01 · ' + fecha + '</div>';
+      h += '</body></html>';
+
+      var win = window.open('', '_blank');
+      if (!win) { alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio.'); return; }
+      win.document.write(h);
+      win.document.close();
+      win.focus();
+      setTimeout(function () { win.print(); }, 600);
+    }
+
+    function renderVistaTabla() {
+      var resumen = calcularResumenTarimas(state.pedido);
+      if (!state.tarimas) {
+        var armado     = calcularTarimas(resumen);
+        state.tarimas  = armado.tarimas;
+        state.pendientes = armado.pendientes;
+      }
+      var tarimas    = state.tarimas;
+      var pendientes = state.pendientes;
+
+      var html = '';
+      html += '<div class="header-bar">';
+      html += '  <div class="brand"><img src="' + LOGO_DATA_URI + '" alt="Evena Foods" /><div><h1>Armado de Tarimas</h1><p>Agrupado por tipo de caja · PLO-01</p></div></div>';
+      html += '  <div style="display:flex;gap:8px;">';
+      html += '    <button id="btn-pdf" class="header-btn" style="font-size:12px;background:var(--ev-orange-text);color:#fff;">⬇ Generar PDF</button>';
+      html += '    <button id="btn-recalcular" class="header-btn" style="font-size:12px;opacity:.8;">↺ Recalcular</button>';
+      html += '    <button id="btn-volver" class="header-btn">← Volver al pedido</button>';
+      html += '  </div>';
+      html += '</div>';
+
+      html += '<div class="table-card">';
+      html += '  <div class="resumen-head">';
+      html += '    <span>Tipo de caja</span><span class="center">Cajas / Cama</span><span class="center">Cajas / Tarima</span><span class="center">Orden</span><span class="center">Cajas pedidas</span><span class="center">Tarimas puras</span><span class="center">Cajas sobrantes</span>';
+      html += '  </div>';
+
+      if (resumen.length === 0) {
+        html += '  <div style="padding:40px 24px;text-align:center;color:var(--ev-grey-muted);">Sin datos en el pedido</div>';
+      } else {
+        resumen.forEach(function (row) {
+          html += '  <div class="resumen-row">';
+          html += '    <div class="tipo-name">' + esc(row.tipo) + '</div>';
+          html += '    <div class="center">' + row.cajasCama + '</div>';
+          html += '    <div class="center">' + row.cajasTarima + '</div>';
+          html += '    <div class="center"><span class="orden-pill">' + row.orden + '</span></div>';
+          html += '    <div class="center" style="font-weight:700;font-size:16px;">' + row.cajasPedidas + '</div>';
+          html += '    <div class="center"><span class="pill ' + (row.tarimasPuras > 0 ? 'pill-green' : 'pill-grey') + '">' + row.tarimasPuras + '</span></div>';
+          html += '    <div class="center"><span class="pill ' + (row.cajasSobrantes > 0 ? 'pill-amber' : 'pill-grey') + '">' + row.cajasSobrantes + '</span></div>';
+          html += '  </div>';
+        });
+        var totPedidas = resumen.reduce(function (s, r) { return s + r.cajasPedidas; }, 0);
+        var totPuras   = resumen.reduce(function (s, r) { return s + r.tarimasPuras; }, 0);
+        var totSobr    = resumen.reduce(function (s, r) { return s + r.cajasSobrantes; }, 0);
+        html += '  <div class="resumen-total">';
+        html += '    <span style="font-weight:700;font-size:13px;">TOTAL</span><span></span><span></span><span></span>';
+        html += '    <span class="center" style="font-weight:800;font-size:16px;">' + totPedidas + '</span>';
+        html += '    <span class="center" style="font-weight:800;font-size:16px;">' + totPuras + '</span>';
+        html += '    <span class="center" style="font-weight:800;font-size:16px;">' + totSobr + '</span>';
+        html += '  </div>';
+      }
+      html += '</div>';
+
+      if (tarimas.length > 0) {
+        html += '<div style="margin-top:24px;">';
+        html += '  <h2 class="section-title">Plan de armado · ' + tarimas.length + ' ' + (tarimas.length === 1 ? 'tarima' : 'tarimas') + '</h2>';
+        tarimas.forEach(function (tarima, tIdx) {
+          var totalCajasTarima = tarima.camas.reduce(function (s, c) {
+            return s + (c.tipo === "pura" ? c.cajas : c.items.reduce(function (a, i) { return a + i.cajas; }, 0));
+          }, 0);
+          var camasDisplay = tarima.camas.slice().reverse();
+
+          var kgTarima  = calcularKgTarima(tarima);
+          var cmTarima  = calcularCmTarima(tarima);
+          var kgStyle   = kgTarima > 1250 ? 'color:#fca5a5;font-weight:800;' : (kgTarima < 900 ? 'color:#fde68a;font-weight:800;' : 'color:#86efac;font-weight:700;');
+          var kgPrefix  = (kgTarima < 900 || kgTarima > 1250) ? '⚠ ' : '';
+          var cmStyle   = cmTarima > ALTURA_MAX ? 'color:#fca5a5;font-weight:800;' : 'color:#86efac;font-weight:700;';
+          var cmPrefix  = cmTarima > ALTURA_MAX ? '⚠ ' : '';
+
+          // Alerta lateral cuando peso o altura quedan fuera de rango
+          var issues = [];
+          if (kgTarima > 1250) issues.push({ lbl: 'PESO', sub: '▲ ' + kgTarima.toLocaleString('es-MX') + ' kg', danger: true });
+          else if (kgTarima < 900) issues.push({ lbl: 'PESO', sub: '▼ ' + kgTarima.toLocaleString('es-MX') + ' kg', danger: false });
+          if (cmTarima > ALTURA_MAX) issues.push({ lbl: 'ALTURA', sub: '▲ ' + cmTarima.toFixed(1) + ' cm', danger: true });
+          var alertaDanger = issues.some(function (it) { return it.danger; });
+
+          html += '  <div class="tarima-card">';
+          html += '    <div class="tarima-body">';
+          html += '    <div class="tarima-header"><span class="num">Tarima #' + tarima.numero + '</span><span class="meta">' + tarima.camas.length + ' ' + (tarima.camas.length === 1 ? 'cama' : 'camas') + ' · ' + totalCajasTarima + ' cajas · <span style="' + kgStyle + '">' + kgPrefix + kgTarima.toLocaleString('es-MX') + ' kg</span> · <span style="' + cmStyle + '">' + cmPrefix + cmTarima.toFixed(1) + ' cm</span></span></div>';
+
+          camasDisplay.forEach(function (cama, di) {
+            var camaNumReal = tarima.camas.length - di;
+            var esBase  = camaNumReal === 1;
+            var esTapa  = camaNumReal === tarima.camas.length;
+            var esMixta = cama.tipo === "mixta";
+            var col     = esMixta ? null : COLORES_TIPO[cama.tipoCaja];
+            var labelTxt = esTapa ? "TAPA" : (esBase ? "BASE" : ("C." + camaNumReal));
+            var labelColor = esMixta ? "var(--ev-orange-text)" : (col ? col.text : "var(--ev-grey)");
+            var labelBg    = esMixta ? "var(--ev-orange-tint)" : (col ? col.bg : "var(--ev-grey-light)");
+
+            html += '    <div class="cama-row" draggable="true" data-tarima-idx="' + tIdx + '" data-cama-di="' + di + '">';
+            html += '      <div class="drag-handle">⠿</div>';
+            html += '      <div class="cama-label" style="background:' + labelBg + ';">';
+            html += '        <span class="txt" style="color:' + labelColor + ';">' + labelTxt + '</span>';
+            if (esMixta) html += '        <span style="font-size:14px;">🔀</span>';
+            html += '      </div>';
+            html += '      <div class="cama-content">';
+            if (esMixta) {
+              var pct = Math.min(100, (cama.espacioUsado / LIMITE_MIXTA) * 100);
+              var barColor = cama.espacioUsado > 14 ? "var(--ev-orange)" : "var(--ev-grey)";
+              html += '        <div class="mixta-head">';
+              html += '          <span class="lbl">Cama Mixta</span>';
+              html += '          <div class="mixta-bar-wrap"><div class="mixta-bar-track"><div class="mixta-bar-fill" style="width:' + pct + '%;background:' + barColor + ';"></div></div><span class="mixta-bar-text">' + cama.espacioUsado.toFixed(2) + ' / 14.45 esp.</span></div>';
+              html += '        </div>';
+              html += '        <div class="mixta-items">';
+              cama.items.forEach(function (it) {
+                var c       = COLORES_TIPO[it.tipoCaja] || {};
+                var tipoEsc = esc(it.tipoCaja);
+                var hasPend = (state.pendientes || []).some(function (p) { return p.tipo === it.tipoCaja && p.cajas > 0; });
+                html += '          <span class="mixta-chip" draggable="true" data-chip-tarima="' + tIdx + '" data-chip-di="' + di + '" data-chip-tipo="' + tipoEsc + '" style="background:' + (c.bg || 'var(--ev-grey-light)') + ';color:' + (c.text || 'var(--ev-grey)') + ';border-color:' + (c.borde || 'var(--ev-grey-border)') + ';">';
+                html += '            <button class="chip-btn chip-minus" data-tarima-idx="' + tIdx + '" data-cama-di="' + di + '" data-tipo="' + tipoEsc + '" title="Quitar 1 caja">−</button>';
+                html += '            ' + it.cajas + ' × ' + tipoEsc;
+                if (hasPend) html += '            <button class="chip-btn chip-plus" data-tarima-idx="' + tIdx + '" data-cama-di="' + di + '" data-tipo="' + tipoEsc + '" title="Agregar 1 caja de pendientes">+</button>';
+                html += '            <span class="esp">(' + it.espacio + ' esp.)</span>';
+                html += '          </span>';
+              });
+              html += '        </div>';
+            } else {
+              html += '        <div class="cama-pura">';
+              html += '          <span class="nombre" style="color:' + (col ? col.text : 'var(--ev-grey)') + ';">' + esc(cama.tipoCaja) + '</span>';
+              html += '          <span class="cajas" style="background:' + (col ? col.bg : 'var(--ev-grey-light)') + ';color:' + (col ? col.text : 'var(--ev-grey)') + ';border-color:' + (col ? col.borde : 'var(--ev-grey-border)') + ';">' + cama.cajas + ' cajas</span>';
+              html += '        </div>';
+            }
+            html += '      </div>';
+            html += '    </div>';
+          });
+
+          html += '    </div>'; // fin tarima-body
+          if (issues.length > 0) {
+            html += '    <div class="tarima-alert ' + (alertaDanger ? 'tarima-alert-danger' : 'tarima-alert-warn') + '">';
+            html += '      <span class="tarima-alert-icon">⚠</span>';
+            issues.forEach(function (it) {
+              html += '      <div class="tarima-alert-item"><span class="lbl">' + it.lbl + '</span><span class="sub">' + it.sub + '</span></div>';
+            });
+            html += '    </div>';
+          }
+          html += '  </div>'; // fin tarima-card
+        });
+        html += '</div>';
+        html += '<div id="drop-nueva-tarima" class="drop-nueva-tarima">⊕ Suelta aquí para crear una nueva tarima</div>';
+      }
+
+      if (pendientes.length > 0) {
+        html += '<div class="pendientes-card">';
+        html += '  <div class="pendientes-title">⚠️ Cajas que no completan ninguna cama (' + pendientes.reduce(function (s, p) { return s + p.cajas; }, 0) + ' cajas)</div>';
+        pendientes.forEach(function (p) {
+          var faltan = SPECS[p.tipo].cajasCama - p.cajas;
+          html += '  <div class="pendiente-row">';
+          html += '    <span class="nombre">' + p.cajas + ' × ' + esc(p.tipo) + '</span>';
+          html += '    <span class="sugerencia">Pide ' + faltan + ' cajas más para completar una cama, o quita estas ' + p.cajas + ' del pedido</span>';
+          html += '  </div>';
+        });
+        html += '</div>';
+      }
+
+      html += '<div style="margin-top:24px;">';
+      html += '  <h2 class="section-title">Detalle del pedido (' + state.pedido.length + ' productos)</h2>';
+      html += '  <div class="table-card">';
+      state.pedido.forEach(function (item) {
+        html += '    <div class="detalle-row">';
+        html += '      <div><div class="nombre">' + esc(item.nombre) + '</div><div class="cat">' + esc(item.categoria) + '</div></div>';
+        html += '      <div class="cant">' + item.cantidad + ' cajas</div>';
+        html += '      <div class="tipo">' + esc(getTipo(item.nombre)) + '</div>';
+        html += '    </div>';
+      });
+      html += '  </div>';
+      html += '</div>';
+
+      return html;
+    }
+
+    /* ───── EVENTOS ───── */
+    function attachListeners() {
+      if (state.vistaTabla) {
+        var btnVolver = document.getElementById("btn-volver");
+        if (btnVolver) btnVolver.addEventListener("click", function () {
+          state.vistaTabla = false;
+          state.tarimas = null;
+          state.pendientes = null;
+          render();
+        });
+        var btnRecalc = document.getElementById("btn-recalcular");
+        if (btnRecalc) btnRecalc.addEventListener("click", function () {
+          state.tarimas = null;
+          state.pendientes = null;
+          render();
+        });
+        var btnPdf = document.getElementById("btn-pdf");
+        if (btnPdf) btnPdf.addEventListener("click", generarPDF);
+
+        // Drag & drop entre camas
+        var camaRows = document.querySelectorAll("[data-cama-di]");
+        camaRows.forEach(function (el) {
+          el.addEventListener("dragstart", function (e) {
+            dragSrc = { tIdx: Number(el.getAttribute("data-tarima-idx")), di: Number(el.getAttribute("data-cama-di")) };
+            e.dataTransfer.effectAllowed = "move";
+            setTimeout(function () { el.classList.add("dragging"); }, 0);
+          });
+          el.addEventListener("dragend", function () {
+            document.querySelectorAll(".cama-row").forEach(function (r) { r.classList.remove("dragging", "drop-target"); });
+          });
+          el.addEventListener("dragover", function (e) {
+            e.preventDefault();
+            document.querySelectorAll(".drop-target").forEach(function (r) { r.classList.remove("drop-target"); });
+            el.classList.add("drop-target");
+          });
+          el.addEventListener("dragleave", function (e) {
+            if (!el.contains(e.relatedTarget)) el.classList.remove("drop-target");
+          });
+          el.addEventListener("drop", function (e) {
+            e.preventDefault();
+            document.querySelectorAll(".drop-target, .chip-drop-ok").forEach(function (r) { r.classList.remove("drop-target", "chip-drop-ok"); });
+            var dstTIdx = Number(el.getAttribute("data-tarima-idx"));
+            var dstDi   = Number(el.getAttribute("data-cama-di"));
+            if (dragTipo) {
+              moverTipoEntreCamas(dragTipo.tIdx, dragTipo.di, dstTIdx, dstDi, dragTipo.tipo);
+              dragTipo = null;
+            } else if (dragSrc) {
+              moveCama(dragSrc.tIdx, dragSrc.di, dstTIdx, dstDi);
+              dragSrc = null;
+            }
+          });
+        });
+
+        // Arrastre de tipo entre camas mixtas
+        document.querySelectorAll("[data-chip-tipo]").forEach(function (chip) {
+          chip.addEventListener("dragstart", function (e) {
+            e.stopPropagation(); // No activar el dragstart de la cama-row
+            dragTipo = {
+              tIdx: Number(chip.getAttribute("data-chip-tarima")),
+              di:   Number(chip.getAttribute("data-chip-di")),
+              tipo: chip.getAttribute("data-chip-tipo")
+            };
+            dragSrc = null;
+            e.dataTransfer.effectAllowed = "move";
+            setTimeout(function () { chip.classList.add("chip-dragging"); }, 0);
+          });
+          chip.addEventListener("dragend", function () {
+            chip.classList.remove("chip-dragging");
+            document.querySelectorAll(".chip-drop-ok").forEach(function (r) { r.classList.remove("chip-drop-ok"); });
+            dragTipo = null;
+          });
+        });
+
+        // Resaltar solo camas mixtas cuando se arrastra un chip
+        document.querySelectorAll("[data-cama-di]").forEach(function (row) {
+          row.addEventListener("dragover", function (e) {
+            if (!dragTipo) return; // Lo maneja el handler anterior
+            var tIdx = Number(row.getAttribute("data-tarima-idx"));
+            var di   = Number(row.getAttribute("data-cama-di"));
+            var tari = (state.tarimas || [])[tIdx];
+            if (!tari) return;
+            var si   = tari.camas.length - 1 - di;
+            var cama = tari.camas[si];
+            if (cama && cama.tipo === "mixta") {
+              e.preventDefault();
+              document.querySelectorAll(".chip-drop-ok").forEach(function (r) { r.classList.remove("chip-drop-ok"); });
+              row.classList.add("chip-drop-ok");
+            }
+          });
+        });
+
+        // Botones +/− de cajas dentro de camas mixtas
+        document.querySelectorAll(".chip-minus").forEach(function (el) {
+          el.addEventListener("click", function (e) {
+            e.stopPropagation();
+            quitarCajaMixta(Number(el.getAttribute("data-tarima-idx")), Number(el.getAttribute("data-cama-di")), el.getAttribute("data-tipo"));
+          });
+        });
+        document.querySelectorAll(".chip-plus").forEach(function (el) {
+          el.addEventListener("click", function (e) {
+            e.stopPropagation();
+            agregarCajaMixta(Number(el.getAttribute("data-tarima-idx")), Number(el.getAttribute("data-cama-di")), el.getAttribute("data-tipo"));
+          });
+        });
+
+        // Zona "nueva tarima"
+        var zonaNueva = document.getElementById("drop-nueva-tarima");
+        if (zonaNueva) {
+          zonaNueva.addEventListener("dragover", function (e) {
+            e.preventDefault();
+            document.querySelectorAll(".drop-target").forEach(function (r) { r.classList.remove("drop-target"); });
+            zonaNueva.classList.add("drop-target");
+          });
+          zonaNueva.addEventListener("dragleave", function (e) {
+            if (!zonaNueva.contains(e.relatedTarget)) zonaNueva.classList.remove("drop-target");
+          });
+          zonaNueva.addEventListener("drop", function (e) {
+            e.preventDefault();
+            zonaNueva.classList.remove("drop-target");
+            if (!dragSrc) return;
+            crearNuevaTarima(dragSrc.tIdx, dragSrc.di);
+            dragSrc = null;
+          });
+        }
+        return;
+      }
+
+      var inputBusqueda = document.getElementById("input-busqueda");
+      if (inputBusqueda) {
+        inputBusqueda.addEventListener("input", function (e) {
+          state.busqueda = e.target.value;
+          state.seleccionado = null;
+          state.mostrarDrop = true;
+          state.highlightIdx = 0;
+          render();
+        });
+        inputBusqueda.addEventListener("focus", function () {
+          if (isRendering) return;
+          state.mostrarDrop = true;
+          render();
+        });
+        inputBusqueda.addEventListener("blur", function () {
+          if (isRendering) return; // el input viejo se está reemplazando, no es un blur real del usuario
+          setTimeout(function () { state.mostrarDrop = false; render(); }, 150);
+        });
+        inputBusqueda.addEventListener("keydown", function (e) {
+          var sugerencias = getSugerencias();
+          if (!state.mostrarDrop || sugerencias.length === 0) return;
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            state.highlightIdx = Math.min(state.highlightIdx + 1, sugerencias.length - 1);
+            render();
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            state.highlightIdx = Math.max(state.highlightIdx - 1, 0);
+            render();
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            elegirProducto(sugerencias[state.highlightIdx]);
+          } else if (e.key === "Escape") {
+            state.mostrarDrop = false;
+            render();
+          }
+        });
+      }
+
+      var dropdownItems = document.querySelectorAll("[data-sugerencia-idx]");
+      dropdownItems.forEach(function (el) {
+        el.addEventListener("mousedown", function (e) {
+          e.preventDefault();
+          var idx = Number(el.getAttribute("data-sugerencia-idx"));
+          elegirProducto(getSugerencias()[idx]);
+        });
+      });
+
+      var inputCantidad = document.getElementById("input-cantidad");
+      if (inputCantidad) {
+        inputCantidad.addEventListener("input", function (e) {
+          state.cantidad = e.target.value.replace(/[^0-9]/g, "");
+          render();
+        });
+        inputCantidad.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") agregarAlPedido();
+        });
+      }
+
+      var btnAgregar = document.getElementById("btn-agregar");
+      if (btnAgregar) btnAgregar.addEventListener("click", agregarAlPedido);
+
+      var removeBtns = document.querySelectorAll("[data-quitar-idx]");
+      removeBtns.forEach(function (el) {
+        el.addEventListener("click", function () {
+          quitarItem(Number(el.getAttribute("data-quitar-idx")));
+        });
+      });
+
+      var btnLimpiar = document.getElementById("btn-limpiar");
+      if (btnLimpiar) btnLimpiar.addEventListener("click", function () { state.pedido = []; render(); });
+
+      var btnArmar = document.getElementById("btn-armar");
+      if (btnArmar) btnArmar.addEventListener("click", function () {
+        state.vistaTabla = true;
+        state.tarimas = null;
+        state.pendientes = null;
+        render();
+      });
+    }
+
+    render();
+  })();
+  </script>
+</body>
+</html>
