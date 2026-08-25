@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/enviar-pedido.js": {
+      "memory": 1536,
+      "maxDuration": 30
+    }
+  }
+}

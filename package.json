@@ -1,0 +1,10 @@
+{
+  "name": "evena-foods-estibas",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@sparticuz/chromium": "123.0.1",
+    "puppeteer-core": "22.6.1",
+    "nodemailer": "^6.9.14"
+  }
+}

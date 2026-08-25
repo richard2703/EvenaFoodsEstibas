@@ -209,6 +209,15 @@
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
   .btn-ghost { background: none; border: none; color: var(--ev-grey-muted); font-weight: 700; font-size: 13px; padding: 11px 16px; cursor: pointer; border-radius: 10px; }
   .btn-ghost:hover { background: var(--ev-grey-light); }
+
+  .toast {
+    position: fixed; bottom: 20px; right: 20px; z-index: 1100; max-width: 320px;
+    padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 700; color: #fff;
+    box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  }
+  .toast-enviando { background: var(--ev-grey); }
+  .toast-ok { background: #15803d; }
+  .toast-error { background: #DC2626; }
 </style>
 </head>
 <body>
@@ -652,7 +661,8 @@
       pendientes: null,
       mostrarModalPDF: false,
       contactoNombre: "",
-      contactoRazonSocial: ""
+      contactoRazonSocial: "",
+      estadoEnvio: null   // null | "enviando" | "ok" | "error"
     };
 
     /* ───── DRAG & DROP ───── */
@@ -1061,12 +1071,44 @@
       h += '<div style="margin-top:30px;border-top:1px solid #DCDCDB;padding-top:8px;font-size:9px;color:#9A9A99;">Generado por Evena Foods · PLO-01 · ' + fecha + '</div>';
       h += '</body></html>';
 
+      enviarPorCorreo(h, state.contactoNombre, state.contactoRazonSocial, fecha);
+
       var win = window.open('', '_blank');
       if (!win) { alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio.'); return; }
       win.document.write(h);
       win.document.close();
       win.focus();
       setTimeout(function () { win.print(); }, 600);
+    }
+
+    function enviarPorCorreo(html, contactoNombre, contactoRazonSocial, fecha) {
+      state.estadoEnvio = "enviando";
+      render();
+      fetch("/api/enviar-pedido", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          html: html,
+          contactoNombre: contactoNombre,
+          contactoRazonSocial: contactoRazonSocial,
+          fecha: fecha
+        })
+      }).then(function (r) {
+        if (!r.ok) throw new Error("status " + r.status);
+        return r.json();
+      }).then(function () {
+        state.estadoEnvio = "ok";
+        render();
+      }).catch(function (err) {
+        console.error(err);
+        state.estadoEnvio = "error";
+        render();
+      }).finally(function () {
+        setTimeout(function () {
+          state.estadoEnvio = null;
+          render();
+        }, 5000);
+      });
     }
 
     function renderModalPDF() {
@@ -1260,6 +1302,14 @@
       html += '</div>';
 
       if (state.mostrarModalPDF) html += renderModalPDF();
+
+      if (state.estadoEnvio === "enviando") {
+        html += '<div class="toast toast-enviando">✉ Enviando copia por correo…</div>';
+      } else if (state.estadoEnvio === "ok") {
+        html += '<div class="toast toast-ok">✓ PDF enviado por correo</div>';
+      } else if (state.estadoEnvio === "error") {
+        html += '<div class="toast toast-error">⚠ No se pudo enviar el correo</div>';
+      }
 
       return html;
     }
