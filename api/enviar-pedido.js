@@ -1,4 +1,3 @@
-var chromium  = require("@sparticuz/chromium");
 var nodemailer = require("nodemailer");
 
 module.exports = async function handler(req, res) {
@@ -25,9 +24,11 @@ module.exports = async function handler(req, res) {
 
   var browser;
   try {
-    // puppeteer-core >=22 se distribuye como ESM puro; se importa dinámicamente
-    // para poder seguir usando require() en el resto de este archivo CommonJS.
+    // puppeteer-core >=22 y @sparticuz/chromium se distribuyen como ESM puro;
+    // se importan dinámicamente para poder seguir usando require() en el resto
+    // de este archivo CommonJS.
     var puppeteer = (await import("puppeteer-core")).default;
+    var chromium = (await import("@sparticuz/chromium")).default;
 
     // LOCAL_CHROME_PATH solo se define en pruebas locales (scripts/test-local.js).
     // En Vercel esta variable no existe y se usa siempre el Chromium de @sparticuz/chromium.
