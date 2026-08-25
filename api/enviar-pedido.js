@@ -27,10 +27,10 @@ module.exports = async function handler(req, res) {
   var browser;
   try {
     browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
+      args: await puppeteer.defaultArgs({ args: chromium.args, headless: "shell" }),
+      defaultViewport: { width: 1920, height: 1080, deviceScaleFactor: 1, isMobile: false, hasTouch: false, isLandscape: true },
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless
+      headless: "shell"
     });
 
     var page = await browser.newPage();
