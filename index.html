@@ -935,6 +935,7 @@
 
     /* ───── GENERADOR PDF ───── */
     function generarPDF() {
+      if (state.estadoEnvio === "enviando") return;
       var resumen    = calcularResumenTarimas(state.pedido);
       var tarimas    = state.tarimas || [];
       var pendientes = state.pendientes || [];
@@ -1149,7 +1150,7 @@
       html += '<div class="header-bar">';
       html += '  <div class="brand"><img src="' + LOGO_DATA_URI + '" alt="Evena Foods" /><div><h1>Armado de Tarimas</h1><p>Agrupado por tipo de caja · PLO-01</p></div></div>';
       html += '  <div style="display:flex;gap:8px;">';
-      html += '    <button id="btn-pdf" class="header-btn" style="font-size:12px;background:var(--ev-orange-text);color:#fff;">⬇ Generar PDF</button>';
+      html += '    <button id="btn-pdf" class="header-btn" style="font-size:12px;background:var(--ev-orange-text);color:#fff;"' + (state.estadoEnvio === "enviando" ? ' disabled' : '') + '>' + (state.estadoEnvio === "enviando" ? '⏳ Enviando…' : '⬇ Generar PDF') + '</button>';
       html += '    <button id="btn-recalcular" class="header-btn" style="font-size:12px;opacity:.8;">↺ Recalcular</button>';
       html += '    <button id="btn-volver" class="header-btn">← Volver al pedido</button>';
       html += '  </div>';
@@ -1332,6 +1333,7 @@
         });
         var btnPdf = document.getElementById("btn-pdf");
         if (btnPdf) btnPdf.addEventListener("click", function () {
+          if (state.estadoEnvio === "enviando") return;
           state.mostrarModalPDF = true;
           render();
         });
