@@ -2,9 +2,15 @@
   "name": "evena-foods-estibas",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "test:local": "node scripts/test-local.js"
+  },
   "dependencies": {
     "@sparticuz/chromium": "149.0.0",
-    "puppeteer-core": "25.8.0",
-    "nodemailer": "^6.9.14"
+    "nodemailer": "^6.9.14",
+    "puppeteer-core": "25.8.0"
+  },
+  "devDependencies": {
+    "dotenv": "^16.6.1"
   }
 }

@@ -26,11 +26,14 @@ module.exports = async function handler(req, res) {
 
   var browser;
   try {
+    // LOCAL_CHROME_PATH solo se define en pruebas locales (scripts/test-local.js).
+    // En Vercel esta variable no existe y se usa siempre el Chromium de @sparticuz/chromium.
+    var esLocal = !!process.env.LOCAL_CHROME_PATH;
     browser = await puppeteer.launch({
-      args: await puppeteer.defaultArgs({ args: chromium.args, headless: "shell" }),
+      args: esLocal ? [] : await puppeteer.defaultArgs({ args: chromium.args, headless: "shell" }),
       defaultViewport: { width: 1920, height: 1080, deviceScaleFactor: 1, isMobile: false, hasTouch: false, isLandscape: true },
-      executablePath: await chromium.executablePath(),
-      headless: "shell"
+      executablePath: esLocal ? process.env.LOCAL_CHROME_PATH : await chromium.executablePath(),
+      headless: esLocal ? true : "shell"
     });
 
     var page = await browser.newPage();
