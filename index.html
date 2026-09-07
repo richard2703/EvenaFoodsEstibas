@@ -90,13 +90,25 @@
     font-size: 11px; font-weight: 700; color: var(--ev-grey); text-transform: uppercase; letter-spacing: .05em;
   }
   .pedido-row {
-    display: grid; grid-template-columns: 1fr 90px 120px 36px; padding: 11px 16px; align-items: center;
+    display: grid; grid-template-columns: 1fr 128px 120px 36px; padding: 11px 16px; align-items: center;
     border-bottom: 1px solid var(--ev-grey-light);
   }
   .pedido-row:last-child { border-bottom: none; }
   .pedido-row .nombre { font-size: 13px; font-weight: 500; color: var(--ev-grey); }
   .pedido-row .cat { font-size: 11px; color: var(--ev-grey-muted); margin-top: 1px; }
-  .pedido-row .cant { text-align: center; font-weight: 700; font-size: 16px; color: var(--ev-orange-text); }
+  .qty-stepper { display: flex; align-items: center; justify-content: center; gap: 4px; }
+  .qty-btn {
+    width: 22px; height: 22px; min-width: 22px; border-radius: 6px; border: 1px solid var(--ev-grey-border);
+    background: var(--ev-grey-light); color: var(--ev-grey); font-weight: 800; font-size: 14px; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .qty-btn:hover { background: var(--ev-orange-tint); color: var(--ev-orange-text); border-color: var(--ev-orange); }
+  .qty-btn[disabled] { opacity: .4; cursor: not-allowed; }
+  .qty-input {
+    width: 46px; text-align: center; font-weight: 700; font-size: 15px; color: var(--ev-orange-text);
+    border: 1px solid transparent; border-radius: 6px; padding: 3px 2px; background: transparent;
+  }
+  .qty-input:hover, .qty-input:focus { border-color: var(--ev-grey-border); background: var(--ev-white); outline: none; }
   .tipo-chip-cell { text-align: center; }
   .tipo-chip { font-size: 11px; color: var(--ev-grey); font-weight: 600; background: var(--ev-grey-light); padding: 2px 8px; border-radius: 6px; }
   .remove-btn { background: none; border: none; cursor: pointer; color: #fca5a5; font-size: 16px; border-radius: 6px; padding: 2px 6px; }
@@ -111,10 +123,18 @@
 
   .pendientes-card { background: var(--ev-orange-tint); border: 2px solid var(--ev-orange); border-radius: 14px; padding: 16px 20px; margin-top: 16px; }
   .pendientes-title { font-size: 13px; font-weight: 800; color: var(--ev-orange-text); display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
-  .pendiente-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,147,30,.3); gap: 10px; flex-wrap: wrap; }
+  .pendiente-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,147,30,.3); gap: 10px; flex-wrap: wrap; cursor: grab; }
   .pendiente-row:last-child { border-bottom: none; }
+  .pendiente-row.dragging { opacity: .35; }
   .pendiente-row .nombre { font-size: 13px; font-weight: 700; color: var(--ev-grey); }
   .pendiente-row .sugerencia { font-size: 12px; color: var(--ev-grey-muted); }
+  .pendiente-cama-row {
+    display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; margin: 6px 0;
+    border: 1px dashed var(--ev-orange); border-radius: 10px; background: var(--ev-white); gap: 10px; flex-wrap: wrap; cursor: grab;
+  }
+  .pendiente-cama-row.dragging { opacity: .35; }
+  .pendiente-cama-row .nombre { font-size: 13px; font-weight: 700; color: var(--ev-orange-text); }
+  .pendiente-cama-row .sugerencia { font-size: 12px; color: var(--ev-grey-muted); }
 
   .resumen-head, .resumen-row, .resumen-total {
     grid-template-columns: 2fr 90px 110px 65px 110px 110px 120px; gap: 8px; align-items: center;
@@ -159,6 +179,16 @@
     letter-spacing: .03em;
   }
   .drop-nueva-tarima.drop-target {
+    border-color: var(--ev-orange); background: var(--ev-orange-tint); color: var(--ev-orange-text);
+  }
+  .tarima-nueva-cama-drop {
+    display: none; margin: 0 16px 10px; padding: 9px; text-align: center;
+    color: var(--ev-grey-muted); font-size: 11px; font-weight: 700; letter-spacing: .03em;
+    border: 2px dashed var(--ev-grey-border); border-radius: 10px;
+    transition: border-color .15s, background .15s, color .15s;
+  }
+  .tarima-nueva-cama-drop.mostrar { display: block; }
+  .tarima-nueva-cama-drop.drop-target {
     border-color: var(--ev-orange); background: var(--ev-orange-tint); color: var(--ev-orange-text);
   }
   .cama-label {
@@ -422,24 +452,67 @@
         remaining[row.tipo] = { pureCamas: pureCamas, partial: partial, spec: spec };
       });
 
+      // Pool de parciales (se calcula temprano para que Fase 2a, 2_500ml y 3 puedan consumirlo)
+      var partialPool = Object.keys(remaining)
+        .filter(function (t) { return remaining[t].partial > 0; })
+        .map(function (t) { return { tipo: t, cajas: remaining[t].partial, orden: remaining[t].spec.orden }; })
+        .sort(function (a, b) { return b.cajas - a.cajas || a.orden - b.orden; });
+
+      // Conversión Garrafa 5L → cama mixta, usando el pool de parciales de 1L.
+      // Solo se activa sobre una cama pura COMPLETA (9 cajas) que sobra al agrupar bloques.
+      //   Prioridad 1: 6 × 5L + 7 × 1L  (consume más 1L; regresa 3 garrafas al pool)
+      //   Prioridad 2: 7 × 5L + 6 × 1L  (regresa 2 garrafas al pool)
+      //   Prioridad 3: 9 × 5L + 3 × 1L
+      //   Sin suficientes 1L en el pool (<3): deja la cama pura
+      var TIPOS_1L_PREF = ["Salsa / Pulpa 1L", "Jarabe 1L"];
+      function convertirGarrafa5L() {
+        var entry1L = null, max1L = 0;
+        TIPOS_1L_PREF.forEach(function (t) {
+          var e = partialPool.filter(function (x) { return x.tipo === t; })[0];
+          if (e && e.cajas > max1L) { max1L = e.cajas; entry1L = e; }
+        });
+        if (!entry1L || max1L < 3) return null; // Sin suficientes 1L, dejar pura
+
+        var cajas5L, cajas1L;
+        if (max1L >= 7)      { cajas5L = 6; cajas1L = 7; }
+        else if (max1L >= 6) { cajas5L = 7; cajas1L = 6; }
+        else                 { cajas5L = 9; cajas1L = 3; }
+
+        if (cajas5L < 9) {
+          var devolver = 9 - cajas5L;
+          var entry5L = partialPool.filter(function (x) { return x.tipo === "Garrafa 5L"; })[0];
+          if (entry5L) { entry5L.cajas += devolver; } else { partialPool.push({ tipo: "Garrafa 5L", cajas: devolver, orden: SPECS["Garrafa 5L"].orden }); }
+        }
+        entry1L.cajas -= cajas1L;
+
+        return {
+          tipo: "mixta",
+          items: [
+            { tipoCaja: "Garrafa 5L", cajas: cajas5L, espacio: cajas5L },
+            { tipoCaja: entry1L.tipo, cajas: cajas1L, espacio: cajas1L }
+          ],
+          espacioUsado: cajas5L + cajas1L
+        };
+      }
+
       // Fase 2a: si algún tipo NO-500ml junta MAX_CAMAS camas puras, tarima completa sin mezcla.
       // 500ml en pedidos mixtos se maneja en Fase 2_500ml (nunca aquí).
+      // Excepción Garrafa 5L: la última cama del bloque se convierte a mixta (6×5L+7×1L, 7×5L+6×1L
+      // o 9×5L+3×1L, según disponibilidad) si el pool de parciales tiene suficientes cajas de 1L.
       Object.keys(remaining).forEach(function (tipo) {
         if (tipo === "500 ml" && !esSolo500ml) return;
         var info = remaining[tipo];
         while (info.pureCamas >= MAX_CAMAS) {
           var camas = [];
           for (var i = 0; i < MAX_CAMAS; i++) camas.push({ tipo: "pura", tipoCaja: tipo, cajas: info.spec.cajasCama });
+          if (tipo === "Garrafa 5L") {
+            var convertida = convertirGarrafa5L();
+            if (convertida) camas[camas.length - 1] = convertida;
+          }
           result.push({ camas: camas });
           info.pureCamas -= MAX_CAMAS;
         }
       });
-
-      // Pool de parciales (se calcula antes de Fase 2_500ml para que ésta pueda consumirlos)
-      var partialPool = Object.keys(remaining)
-        .filter(function (t) { return remaining[t].partial > 0; })
-        .map(function (t) { return { tipo: t, cajas: remaining[t].partial, orden: remaining[t].spec.orden }; })
-        .sort(function (a, b) { return b.cajas - a.cajas || a.orden - b.orden; });
 
       // Fase 2_500ml: sobrantes de 500ml en pedidos mixtos.
       // Se arman tarimas con hasta (camasTarima-1) = 6 camas puras + 1 cama mixta con los parciales disponibles.
@@ -485,41 +558,8 @@
         bloques.push(flatUnits.slice(i, i + tamBloque));
       }
 
-      // Fase 2c: prioridad de conversión Garrafa 5L → cama mixta, usando el pool de parciales
-      //   ANTES de que Fase 3 use ese mismo pool para su cama mixta genérica de cada bloque.
-      //   Prioridad 1: 6 × 5L + 7 × 1L  (consume más 1L; regresa 3 garrafas al pool)
-      //   Prioridad 2: 9 × 5L + 3 × 1L
-      //   Sin suficientes 1L en el pool (<3): deja la cama pura
-      var TIPOS_1L_PREF = ["Salsa / Pulpa 1L", "Jarabe 1L"];
-      function convertirGarrafa5L() {
-        var entry1L = null, max1L = 0;
-        TIPOS_1L_PREF.forEach(function (t) {
-          var e = partialPool.filter(function (x) { return x.tipo === t; })[0];
-          if (e && e.cajas > max1L) { max1L = e.cajas; entry1L = e; }
-        });
-        if (!entry1L || max1L < 3) return null; // Sin suficientes 1L, dejar pura
-
-        var cajas5L, cajas1L;
-        if (max1L >= 7) {
-          cajas5L = 6; cajas1L = 7;
-          var entry5L = partialPool.filter(function (x) { return x.tipo === "Garrafa 5L"; })[0];
-          if (entry5L) { entry5L.cajas += 3; } else { partialPool.push({ tipo: "Garrafa 5L", cajas: 3, orden: SPECS["Garrafa 5L"].orden }); }
-        } else {
-          cajas5L = 9; cajas1L = 3;
-        }
-        entry1L.cajas -= cajas1L;
-
-        return {
-          tipo: "mixta",
-          items: [
-            { tipoCaja: "Garrafa 5L", cajas: cajas5L, espacio: cajas5L },
-            { tipoCaja: entry1L.tipo, cajas: cajas1L, espacio: cajas1L }
-          ],
-          espacioUsado: cajas5L + cajas1L
-        };
-      }
-
       // Fase 3: cada bloque → tarima con camas puras (ordenadas por estiba) + 1 cama mixta del pool
+      // (convertirGarrafa5L() se definió arriba, junto al pool de parciales, para que Fase 2a también la use)
       bloques.forEach(function (bloque) {
         var ordenado = bloque.slice().sort(function (a, b) { return SPECS[a].orden - SPECS[b].orden; });
         var camas = ordenado.map(function (tipo) {
@@ -557,7 +597,41 @@
         }
       }
 
-      // (La regla de Garrafa 5L se movió a Fase 2c, antes de Fase 3 — ver arriba)
+      // Fase 5: con SOLO lo que quedó pendiente (ya no hay camas puras que agrupar), se vuelven a
+      // evaluar las recetas especiales de Garrafa 5L — esta vez sin exigir una cama pura de 9, así que
+      // las recetas de 6 o 7 garrafas también pueden aplicar directo sobre el sobrante suelto.
+      // El resultado NO se asigna a ninguna tarima automáticamente: se ofrece como "cama sugerida" en
+      // el apartado de sobrantes para que el usuario la arrastre a la cama que prefiera.
+      var pendientesCamas = [];
+      (function () {
+        var entryG = pendientes.filter(function (p) { return p.tipo === "Garrafa 5L"; })[0];
+        if (!entryG) return;
+        var recetas = [{ g: 6, l: 7 }, { g: 7, l: 6 }, { g: 9, l: 3 }];
+        var siguioAplicando = true;
+        while (siguioAplicando && entryG.cajas > 0) {
+          siguioAplicando = false;
+          var entry1L = null, max1L = 0;
+          TIPOS_1L_PREF.forEach(function (t) {
+            var e = pendientes.filter(function (p) { return p.tipo === t; })[0];
+            if (e && e.cajas > max1L) { max1L = e.cajas; entry1L = e; }
+          });
+          if (!entry1L) break;
+          for (var i = 0; i < recetas.length; i++) {
+            var r = recetas[i];
+            if (entryG.cajas >= r.g && max1L >= r.l) {
+              entryG.cajas  -= r.g;
+              entry1L.cajas -= r.l;
+              pendientesCamas.push({ items: [
+                { tipoCaja: "Garrafa 5L", cajas: r.g },
+                { tipoCaja: entry1L.tipo, cajas: r.l }
+              ] });
+              siguioAplicando = true;
+              break;
+            }
+          }
+        }
+        pendientes = pendientes.filter(function (p) { return p.cajas > 0; });
+      })();
 
       // Consolidación de camas mixtas:
       // Si una tarima tiene 1–2 camas mixtas, moverlas a la tarima con menos camas totales
@@ -599,55 +673,36 @@
 
       return {
         tarimas: result.map(function (t, i) { return Object.assign({ numero: i + 1 }, t); }),
-        pendientes: pendientes
+        pendientes: pendientes,
+        pendientesCamas: pendientesCamas
       };
     }
 
     /* ───── ESTADO ───── */
     // Pedido de prueba — pulsa "Limpiar" para vaciarlo
     var PEDIDO_DEMO = [
-  /*    { categoria: "ADEREZOS",        nombre: "ADEREZO RANCH EVENA FOODS 3.8L C/4", cantidad: 88 },
-      { categoria: "SALSAS",          nombre: "BLACKMIX EVENA FOODS 1L C/12", cantidad: 6 },
-      { categoria: "SALSAS",          nombre: "BLACKMIX EVENA FOODS 3.8L C/4", cantidad: 26 },
-      { categoria: "SALSAS",          nombre: "BLACKMIX EVENA FOODS 500ML C/12", cantidad: 180 },
-      { categoria: "JARABES",         nombre: "ENDULZANTE CURAZAO DRAC VALLEY 1L C/12", cantidad: 189 },
-      { categoria: "JARABES",         nombre: "ENDULZANTE GRANADINA DRAC VALLEY 1L C/12", cantidad: 155 },
-      { categoria: "JARABES",         nombre: "ENDULZANTE GRANADINA EL NACIONAL 1L C/12", cantidad: 104 },
-      { categoria: "JARABES",         nombre: "ENDULZANTE NATURAL DRAC VALLEY 1L C/12", cantidad: 5 },
-      { categoria: "JARABES",         nombre: "ENDULZANTE NATURAL DRAC VALLEY 5 LT", cantidad: 200 },
-      { categoria: "JARABES",         nombre: "ENDULZANTE NATURAL DRAC VALLEY 5L C/4", cantidad: 130 },
-      { categoria: "SALSAS",          nombre: "JUGO SAZONADOR EVENA FOODS 1L C/12", cantidad: 111 },
-      { categoria: "SALSAS",          nombre: "JUGO SAZONADOR EVENA FOODS 500ML C/12", cantidad: 144 },
-      { categoria: "LIMON DESH",      nombre: "LIMON DESHIDRATADO EVENA FOODS 750 GR C/25", cantidad: 151 },
-      { categoria: "PULPAS",          nombre: "PULPA FRESA T/A DRAC VALLEY 1L C/12", cantidad: 167 },
-      { categoria: "PULPAS",          nombre: "PULPA FRESA T/A DRAC VALLEY 500ML C/12", cantidad: 231 },
-      { categoria: "PULPAS",          nombre: "PULPA FRUTOS ROJOS T/A DRAC VALLEY 1L C/12", cantidad: 93 },
-      { categoria: "PULPAS",          nombre: "PULPA FRUTOS ROJOS T/A DRAC VALLEY 500ML C/12", cantidad: 130 },
-      { categoria: "PULPAS",          nombre: "PULPA MANGO T/A DRAC VALLEY 1L C/12", cantidad: 47 },
-      { categoria: "PULPAS",          nombre: "PULPA MANGO T/A DRAC VALLEY 500ML C/12", cantidad: 179 },
-      { categoria: "PULPAS",          nombre: "PULPA MARACUYA T/A DRAC VALLEY 1L C/12", cantidad: 137 },
-      { categoria: "PULPAS",          nombre: "PULPA MARACUYA T/A DRAC VALLEY 500ML C/12", cantidad: 201 },
-      { categoria: "PULPAS",          nombre: "PULPA TAMARINDO T/A DRAC VALLEY 1L C/12", cantidad: 39 },
-      { categoria: "SALSAS",          nombre: "SALSA BBQ EVENA FOODS 1L C/12", cantidad: 11 },
-      { categoria: "SALSAS",          nombre: "SALSA BBQ EVENA FOODS 3.8L C/4", cantidad: 208 },
-      { categoria: "SALSAS",          nombre: "SALSA BBQ EVENA FOODS 500ML C/12", cantidad: 222 },
-      { categoria: "SALSAS",          nombre: "SALSA BBQ HABANERO EVENA FOODS 500ML C/12", cantidad: 125 },
-      { categoria: "SALSAS",          nombre: "SALSA BLACK DEMON EVENA FOODS 500ML C/12", cantidad: 7 },
-      { categoria: "SALSAS",          nombre: "SALSA BUFFALO EVENA FOODS 1L C/12", cantidad: 186 },
-      { categoria: "SALSAS",          nombre: "SALSA BUFFALO EVENA FOODS 3.8L C/4", cantidad: 46 },
-      { categoria: "SALSAS",          nombre: "SALSA BUFFALO EVENA FOODS 500ML C/12", cantidad: 54 },
-      { categoria: "SALSAS",          nombre: "SALSA INGLESA EVENA FOODS 1L C/12", cantidad: 134 },
-      { categoria: "SALSAS",          nombre: "SALSA INGLESA EVENA FOODS 500ML C/12", cantidad: 168 },
-      { categoria: "SALSAS",          nombre: "SALSA MANGO HABANERO EVENA FOODS 1L C/12", cantidad: 218 },
-      { categoria: "SALSAS",          nombre: "SALSA MANGO HABANERO EVENA FOODS 3.8L C/4", cantidad: 36 },
-      { categoria: "SALSAS",          nombre: "SALSA MANGO HABANERO EVENA FOODS 500ML C/12", cantidad: 65 },
-      { categoria: "SALSAS",          nombre: "SALSA PIÑA HOT EVENA FOODS 1L C/12", cantidad: 82 },
-      { categoria: "SALSAS",          nombre: "SALSA PIÑA HOT EVENA FOODS 3.8L C/4", cantidad: 179 },
-      { categoria: "SALSAS",          nombre: "SALSA PIÑA HOT EVENA FOODS 500ML C/12", cantidad: 145 },
-      { categoria: "SALSAS",          nombre: "SALSA TAMARINDO HOT EVENA FOODS 500ML C/12", cantidad: 104 },
-      { categoria: "SALSAS",          nombre: "SALSA TAMARINDO HOT EVENA FOODS 1L C/12", cantidad: 150 },
-      { categoria: "SALSAS",          nombre: "SALSA TAMARINDO HOT EVENA FOODS 3.8L C/4", cantidad: 227 }
- */   ];
+      { categoria: "ADEREZOS", nombre: "ADEREZO RANCH EVENA FOODS 3.8L C/4", cantidad: 5 },
+      { categoria: "SALSAS",   nombre: "BLACKMIX EVENA FOODS 1L C/12", cantidad: 20 },
+      { categoria: "SALSAS",   nombre: "BLACKMIX EVENA FOODS 3.8L C/4", cantidad: 20 },
+      { categoria: "JARABES",  nombre: "ENDULZANTE GRANADINA DRAC VALLEY 1L C/12", cantidad: 15 },
+      { categoria: "JARABES",  nombre: "ENDULZANTE NATURAL DRAC VALLEY 5 LT", cantidad: 7 },
+      { categoria: "JARABES",  nombre: "ENDULZANTE NATURAL DRAC VALLEY 1L C/12", cantidad: 32 },
+      { categoria: "LIMON DESH", nombre: "LIMON DESHIDRATADO EVENA FOODS 750 GR C/25", cantidad: 3 },
+      { categoria: "PULPAS",   nombre: "PULPA FRESA T/A DRAC VALLEY 1L C/12", cantidad: 15 },
+      { categoria: "PULPAS",   nombre: "PULPA FRUTOS ROJOS T/A DRAC VALLEY 1L C/12", cantidad: 7 },
+      { categoria: "PULPAS",   nombre: "PULPA MANGO T/A DRAC VALLEY 1L C/12", cantidad: 30 },
+      { categoria: "PULPAS",   nombre: "PULPA MARACUYA T/A DRAC VALLEY 1L C/12", cantidad: 17 },
+      { categoria: "PULPAS",   nombre: "PULPA TAMARINDO T/A DRAC VALLEY 1L C/12", cantidad: 2 },
+      { categoria: "SALSAS",   nombre: "SALSA BBQ EVENA FOODS 3.8L C/4", cantidad: 2 },
+      { categoria: "SALSAS",   nombre: "SALSA MANGO HABANERO EVENA FOODS 1L C/12", cantidad: 15 },
+      { categoria: "SALSAS",   nombre: "SALSA MANGO HABANERO EVENA FOODS 3.8L C/4", cantidad: 10 },
+      { categoria: "SALSAS",   nombre: "SALSA PIÑA HOT EVENA FOODS 1L C/12", cantidad: 5 },
+      { categoria: "SALSAS",   nombre: "SALSA TAMARINDO HOT EVENA FOODS 1L C/12", cantidad: 2 },
+      { categoria: "SALSAS",   nombre: "BLACKMIX EVENA FOODS 500ML C/12", cantidad: 2 },
+      { categoria: "PULPAS",   nombre: "PULPA FRUTOS ROJOS T/A DRAC VALLEY 500ML C/12", cantidad: 5 },
+      { categoria: "SALSAS",   nombre: "SALSA BBQ HABANERO EVENA FOODS 500ML C/12", cantidad: 5 },
+      { categoria: "SALSAS",   nombre: "SALSA BLACK DEMON EVENA FOODS 500ML C/12", cantidad: 5 }
+    ];
 
     var state = {
       pedido: PEDIDO_DEMO.slice(),   // .slice() clona el array; "Limpiar" lo vacía sin tocar PEDIDO_DEMO
@@ -668,6 +723,8 @@
     /* ───── DRAG & DROP ───── */
     var dragSrc  = null; // { tIdx, di } — arrastre de cama completa
     var dragTipo = null; // { tIdx, di, tipo } — arrastre de tipo entre camas mixtas
+    var dragPendiente     = null; // { idx } — arrastre de una fila de sobrante (state.pendientes)
+    var dragPendienteCama = null; // { idx } — arrastre de una cama sugerida (state.pendientesCamas)
 
     function moverTipoEntreCamas(srcTIdx, srcDi, dstTIdx, dstDi, tipo) {
       if (srcTIdx === dstTIdx && srcDi === dstDi) return;
@@ -711,6 +768,109 @@
       state.tarimas = state.tarimas.filter(function (t) { return t.camas.length > 0; });
       state.tarimas.push({ camas: [cama], numero: state.tarimas.length + 1 });
       state.tarimas.forEach(function (t, i) { t.numero = i + 1; });
+      render();
+    }
+
+    // Convierte una cama pura en mixta (para poder alojar un tipo distinto) si hace falta,
+    // y agrega los items dados sumando a los que ya existan del mismo tipo.
+    function agregarItemsACama(cama, items) {
+      if (cama.tipo === "pura") {
+        var val = VALORES_ESPACIO[cama.tipoCaja];
+        cama.items = [{ tipoCaja: cama.tipoCaja, cajas: cama.cajas, espacio: +(cama.cajas * val).toFixed(2) }];
+        cama.tipo = "mixta";
+        delete cama.tipoCaja;
+        delete cama.cajas;
+      }
+      items.forEach(function (nuevo) {
+        var val = VALORES_ESPACIO[nuevo.tipoCaja];
+        var esp = +(nuevo.cajas * val).toFixed(2);
+        var existente = cama.items.find(function (it) { return it.tipoCaja === nuevo.tipoCaja; });
+        if (existente) {
+          existente.cajas  += nuevo.cajas;
+          existente.espacio = +((existente.espacio || 0) + esp).toFixed(2);
+        } else {
+          cama.items.push({ tipoCaja: nuevo.tipoCaja, cajas: nuevo.cajas, espacio: esp });
+        }
+      });
+      cama.items.sort(function (a, b) { return SPECS[a.tipoCaja].orden - SPECS[b.tipoCaja].orden; });
+      cama.espacioUsado = +(cama.items.reduce(function (s, it) { return s + it.espacio; }, 0).toFixed(2));
+    }
+
+    function moverPendienteACama(pendIdx, dstTIdx, dstDi) {
+      var pend = (state.pendientes || [])[pendIdx];
+      var dstT = state.tarimas[dstTIdx];
+      if (!pend || !dstT) return;
+      var dstCama = dstT.camas[dstT.camas.length - 1 - dstDi];
+      if (!dstCama) return;
+      agregarItemsACama(dstCama, [{ tipoCaja: pend.tipo, cajas: pend.cajas }]);
+      state.pendientes.splice(pendIdx, 1);
+      render();
+    }
+
+    function crearNuevaTarimaDesdePendiente(pendIdx) {
+      var pend = (state.pendientes || [])[pendIdx];
+      if (!pend) return;
+      var val = VALORES_ESPACIO[pend.tipo];
+      var esp = +(pend.cajas * val).toFixed(2);
+      state.tarimas = state.tarimas || [];
+      state.tarimas.push({
+        numero: state.tarimas.length + 1,
+        camas: [{ tipo: "mixta", items: [{ tipoCaja: pend.tipo, cajas: pend.cajas, espacio: esp }], espacioUsado: esp }]
+      });
+      state.pendientes.splice(pendIdx, 1);
+      render();
+    }
+
+    function moverPendienteCamaACama(idx, dstTIdx, dstDi) {
+      var bundle = (state.pendientesCamas || [])[idx];
+      var dstT   = state.tarimas[dstTIdx];
+      if (!bundle || !dstT) return;
+      var dstCama = dstT.camas[dstT.camas.length - 1 - dstDi];
+      if (!dstCama) return;
+      agregarItemsACama(dstCama, bundle.items);
+      state.pendientesCamas.splice(idx, 1);
+      render();
+    }
+
+    function crearNuevaTarimaDesdePendienteCama(idx) {
+      var bundle = (state.pendientesCamas || [])[idx];
+      if (!bundle) return;
+      var items = bundle.items.map(function (it) {
+        var val = VALORES_ESPACIO[it.tipoCaja];
+        return { tipoCaja: it.tipoCaja, cajas: it.cajas, espacio: +(it.cajas * val).toFixed(2) };
+      });
+      var espacioUsado = +(items.reduce(function (s, it) { return s + it.espacio; }, 0).toFixed(2));
+      state.tarimas = state.tarimas || [];
+      state.tarimas.push({ numero: state.tarimas.length + 1, camas: [{ tipo: "mixta", items: items, espacioUsado: espacioUsado }] });
+      state.pendientesCamas.splice(idx, 1);
+      render();
+    }
+
+    // Agrega una cama MIXTA NUEVA (no mezclada con las existentes) al final de una tarima ya armada.
+    function agregarCamaNueva(tIdx, items) {
+      var tarima = state.tarimas[tIdx];
+      if (!tarima) return;
+      var itemsFull = items.map(function (it) {
+        var val = VALORES_ESPACIO[it.tipoCaja];
+        return { tipoCaja: it.tipoCaja, cajas: it.cajas, espacio: +(it.cajas * val).toFixed(2) };
+      });
+      var espacioUsado = +(itemsFull.reduce(function (s, it) { return s + it.espacio; }, 0).toFixed(2));
+      tarima.camas.push({ tipo: "mixta", items: itemsFull, espacioUsado: espacioUsado });
+    }
+
+    function moverPendienteANuevaCama(pendIdx, tIdx) {
+      var pend = (state.pendientes || [])[pendIdx];
+      if (!pend) return;
+      agregarCamaNueva(tIdx, [{ tipoCaja: pend.tipo, cajas: pend.cajas }]);
+      state.pendientes.splice(pendIdx, 1);
+      render();
+    }
+
+    function moverPendienteCamaANuevaCama(idx, tIdx) {
+      var bundle = (state.pendientesCamas || [])[idx];
+      if (!bundle) return;
+      agregarCamaNueva(tIdx, bundle.items);
+      state.pendientesCamas.splice(idx, 1);
       render();
     }
 
@@ -834,6 +994,22 @@
       render();
     }
 
+    function cambiarCantidad(idx, delta) {
+      var item = state.pedido[idx];
+      if (!item) return;
+      var nueva = item.cantidad + delta;
+      item.cantidad = Math.max(1, nueva);
+      render();
+    }
+
+    function fijarCantidad(idx, valor) {
+      var item = state.pedido[idx];
+      if (!item) return;
+      var nueva = Math.floor(Number(valor));
+      item.cantidad = (!nueva || nueva < 1) ? 1 : nueva;
+      render();
+    }
+
     /* ───── RENDER ───── */
     var root = document.getElementById("root");
     // true durante toda la reconstrucción del DOM: evita que el blur/focus
@@ -909,13 +1085,17 @@
         html += '<div class="empty-state"><div class="icon">📋</div><div class="title">El pedido está vacío</div><div class="sub">Busca un producto y agrega la cantidad</div></div>';
       } else {
         html += '<div class="table-card">';
-        html += '  <div class="table-head" style="grid-template-columns:1fr 90px 120px 36px;">';
+        html += '  <div class="table-head" style="grid-template-columns:1fr 128px 120px 36px;">';
         html += '    <span>Producto</span><span class="center">Cant.</span><span class="center">Tipo caja</span><span></span>';
         html += '  </div>';
         state.pedido.forEach(function (item, idx) {
           html += '  <div class="pedido-row">';
           html += '    <div><div class="nombre">' + esc(item.nombre) + '</div><div class="cat">' + esc(item.categoria) + '</div></div>';
-          html += '    <div class="cant">' + item.cantidad + '</div>';
+          html += '    <div class="qty-stepper">';
+          html += '      <button class="qty-btn" data-qty-idx="' + idx + '" data-qty-delta="-1"' + (item.cantidad <= 1 ? ' disabled' : '') + '>−</button>';
+          html += '      <input class="qty-input" type="text" inputmode="numeric" pattern="[0-9]*" data-qty-idx="' + idx + '" value="' + item.cantidad + '" />';
+          html += '      <button class="qty-btn" data-qty-idx="' + idx + '" data-qty-delta="1">+</button>';
+          html += '    </div>';
           html += '    <div class="tipo-chip-cell"><span class="tipo-chip">' + esc(getTipo(item.nombre)) + '</span></div>';
           html += '    <button class="remove-btn" data-quitar-idx="' + idx + '">✕</button>';
           html += '  </div>';
@@ -1139,12 +1319,14 @@
     function renderVistaTabla() {
       var resumen = calcularResumenTarimas(state.pedido);
       if (!state.tarimas) {
-        var armado     = calcularTarimas(resumen);
-        state.tarimas  = armado.tarimas;
-        state.pendientes = armado.pendientes;
+        var armado          = calcularTarimas(resumen);
+        state.tarimas       = armado.tarimas;
+        state.pendientes    = armado.pendientes;
+        state.pendientesCamas = armado.pendientesCamas;
       }
-      var tarimas    = state.tarimas;
-      var pendientes = state.pendientes;
+      var tarimas         = state.tarimas;
+      var pendientes      = state.pendientes;
+      var pendientesCamas = state.pendientesCamas || [];
 
       var html = '';
       html += '<div class="header-bar">';
@@ -1261,6 +1443,7 @@
             html += '    </div>';
           });
 
+          html += '    <div class="tarima-nueva-cama-drop" data-tarima-idx="' + tIdx + '">+ Soltar aquí para agregar como cama nueva en esta tarima</div>';
           html += '    </div>'; // fin tarima-body
           if (issues.length > 0) {
             html += '    <div class="tarima-alert ' + (alertaDanger ? 'tarima-alert-danger' : 'tarima-alert-warn') + '">';
@@ -1276,14 +1459,23 @@
         html += '<div id="drop-nueva-tarima" class="drop-nueva-tarima">⊕ Suelta aquí para crear una nueva tarima</div>';
       }
 
-      if (pendientes.length > 0) {
+      if (pendientes.length > 0 || pendientesCamas.length > 0) {
+        var totalPend = pendientes.reduce(function (s, p) { return s + p.cajas; }, 0)
+          + pendientesCamas.reduce(function (s, b) { return s + b.items.reduce(function (s2, it) { return s2 + it.cajas; }, 0); }, 0);
         html += '<div class="pendientes-card">';
-        html += '  <div class="pendientes-title">⚠️ Cajas que no completan ninguna cama (' + pendientes.reduce(function (s, p) { return s + p.cajas; }, 0) + ' cajas)</div>';
-        pendientes.forEach(function (p) {
+        html += '  <div class="pendientes-title">⚠️ Cajas que no completan ninguna cama (' + totalPend + ' cajas) · arrástralas a una cama</div>';
+        pendientesCamas.forEach(function (b, idx) {
+          var texto = b.items.map(function (it) { return it.cajas + ' × ' + esc(it.tipoCaja); }).join(' + ');
+          html += '  <div class="pendiente-cama-row" draggable="true" data-pendcama-idx="' + idx + '">';
+          html += '    <span class="nombre">🔀 ' + texto + '</span>';
+          html += '    <span class="sugerencia">Cama especial lista · arrástrala a una cama o a "nueva tarima"</span>';
+          html += '  </div>';
+        });
+        pendientes.forEach(function (p, idx) {
           var faltan = SPECS[p.tipo].cajasCama - p.cajas;
-          html += '  <div class="pendiente-row">';
+          html += '  <div class="pendiente-row" draggable="true" data-pend-idx="' + idx + '">';
           html += '    <span class="nombre">' + p.cajas + ' × ' + esc(p.tipo) + '</span>';
-          html += '    <span class="sugerencia">Pide ' + faltan + ' cajas más para completar una cama, o quita estas ' + p.cajas + ' del pedido</span>';
+          html += '    <span class="sugerencia">Pide ' + faltan + ' cajas más para completar una cama, arrástrala a una cama, o quita estas ' + p.cajas + ' del pedido</span>';
           html += '  </div>';
         });
         html += '</div>';
@@ -1323,12 +1515,14 @@
           state.vistaTabla = false;
           state.tarimas = null;
           state.pendientes = null;
+          state.pendientesCamas = null;
           render();
         });
         var btnRecalc = document.getElementById("btn-recalcular");
         if (btnRecalc) btnRecalc.addEventListener("click", function () {
           state.tarimas = null;
           state.pendientes = null;
+          state.pendientesCamas = null;
           render();
         });
         var btnPdf = document.getElementById("btn-pdf");
@@ -1408,6 +1602,12 @@
             if (dragTipo) {
               moverTipoEntreCamas(dragTipo.tIdx, dragTipo.di, dstTIdx, dstDi, dragTipo.tipo);
               dragTipo = null;
+            } else if (dragPendiente) {
+              moverPendienteACama(dragPendiente.idx, dstTIdx, dstDi);
+              dragPendiente = null;
+            } else if (dragPendienteCama) {
+              moverPendienteCamaACama(dragPendienteCama.idx, dstTIdx, dstDi);
+              dragPendienteCama = null;
             } else if (dragSrc) {
               moveCama(dragSrc.tIdx, dragSrc.di, dstTIdx, dstDi);
               dragSrc = null;
@@ -1467,6 +1667,71 @@
           });
         });
 
+        // Muestra/oculta las franjas "+ agregar como cama nueva" de cada tarima mientras se arrastra un sobrante
+        function mostrarZonasCamaNueva(mostrar) {
+          document.querySelectorAll(".tarima-nueva-cama-drop").forEach(function (z) {
+            z.classList.toggle("mostrar", mostrar);
+            if (!mostrar) z.classList.remove("drop-target");
+          });
+        }
+
+        // Arrastre de filas de sobrante (pendientes) hacia una cama
+        document.querySelectorAll("[data-pend-idx]").forEach(function (row) {
+          row.addEventListener("dragstart", function (e) {
+            dragPendiente = { idx: Number(row.getAttribute("data-pend-idx")) };
+            dragSrc = null; dragTipo = null; dragPendienteCama = null;
+            e.dataTransfer.effectAllowed = "move";
+            setTimeout(function () { row.classList.add("dragging"); mostrarZonasCamaNueva(true); }, 0);
+          });
+          row.addEventListener("dragend", function () {
+            document.querySelectorAll(".pendiente-row, .pendiente-cama-row").forEach(function (r) { r.classList.remove("dragging"); });
+            document.querySelectorAll(".drop-target").forEach(function (r) { r.classList.remove("drop-target"); });
+            mostrarZonasCamaNueva(false);
+            dragPendiente = null;
+          });
+        });
+
+        // Arrastre de camas sugeridas (pendientesCamas) hacia una cama
+        document.querySelectorAll("[data-pendcama-idx]").forEach(function (row) {
+          row.addEventListener("dragstart", function (e) {
+            dragPendienteCama = { idx: Number(row.getAttribute("data-pendcama-idx")) };
+            dragSrc = null; dragTipo = null; dragPendiente = null;
+            e.dataTransfer.effectAllowed = "move";
+            setTimeout(function () { row.classList.add("dragging"); mostrarZonasCamaNueva(true); }, 0);
+          });
+          row.addEventListener("dragend", function () {
+            document.querySelectorAll(".pendiente-row, .pendiente-cama-row").forEach(function (r) { r.classList.remove("dragging"); });
+            document.querySelectorAll(".drop-target").forEach(function (r) { r.classList.remove("drop-target"); });
+            mostrarZonasCamaNueva(false);
+            dragPendienteCama = null;
+          });
+        });
+
+        // Franja "+ agregar como cama nueva en esta tarima" (una por tarima)
+        document.querySelectorAll("[data-tarima-idx].tarima-nueva-cama-drop").forEach(function (zona) {
+          zona.addEventListener("dragover", function (e) {
+            if (!dragPendiente && !dragPendienteCama) return; // esta franja solo acepta sobrantes
+            e.preventDefault();
+            document.querySelectorAll(".drop-target").forEach(function (r) { r.classList.remove("drop-target"); });
+            zona.classList.add("drop-target");
+          });
+          zona.addEventListener("dragleave", function (e) {
+            if (!zona.contains(e.relatedTarget)) zona.classList.remove("drop-target");
+          });
+          zona.addEventListener("drop", function (e) {
+            e.preventDefault();
+            zona.classList.remove("drop-target");
+            var tIdx = Number(zona.getAttribute("data-tarima-idx"));
+            if (dragPendiente) {
+              moverPendienteANuevaCama(dragPendiente.idx, tIdx);
+              dragPendiente = null;
+            } else if (dragPendienteCama) {
+              moverPendienteCamaANuevaCama(dragPendienteCama.idx, tIdx);
+              dragPendienteCama = null;
+            }
+          });
+        });
+
         // Zona "nueva tarima"
         var zonaNueva = document.getElementById("drop-nueva-tarima");
         if (zonaNueva) {
@@ -1481,9 +1746,16 @@
           zonaNueva.addEventListener("drop", function (e) {
             e.preventDefault();
             zonaNueva.classList.remove("drop-target");
-            if (!dragSrc) return;
-            crearNuevaTarima(dragSrc.tIdx, dragSrc.di);
-            dragSrc = null;
+            if (dragPendiente) {
+              crearNuevaTarimaDesdePendiente(dragPendiente.idx);
+              dragPendiente = null;
+            } else if (dragPendienteCama) {
+              crearNuevaTarimaDesdePendienteCama(dragPendienteCama.idx);
+              dragPendienteCama = null;
+            } else if (dragSrc) {
+              crearNuevaTarima(dragSrc.tIdx, dragSrc.di);
+              dragSrc = null;
+            }
           });
         }
         return;
@@ -1558,6 +1830,26 @@
         });
       });
 
+      var qtyBtns = document.querySelectorAll("[data-qty-delta]");
+      qtyBtns.forEach(function (el) {
+        el.addEventListener("click", function () {
+          cambiarCantidad(Number(el.getAttribute("data-qty-idx")), Number(el.getAttribute("data-qty-delta")));
+        });
+      });
+
+      var qtyInputs = document.querySelectorAll(".qty-input");
+      qtyInputs.forEach(function (el) {
+        el.addEventListener("input", function (e) {
+          e.target.value = e.target.value.replace(/[^0-9]/g, "");
+        });
+        el.addEventListener("blur", function (e) {
+          fijarCantidad(Number(el.getAttribute("data-qty-idx")), e.target.value);
+        });
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") el.blur();
+        });
+      });
+
       var btnLimpiar = document.getElementById("btn-limpiar");
       if (btnLimpiar) btnLimpiar.addEventListener("click", function () { state.pedido = []; render(); });
 
@@ -1566,6 +1858,7 @@
         state.vistaTabla = true;
         state.tarimas = null;
         state.pendientes = null;
+        state.pendientesCamas = null;
         render();
       });
     }
