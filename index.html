@@ -236,6 +236,7 @@
   .modal-box h3 { font-size: 16px; font-weight: 800; color: var(--ev-grey-dark); margin-bottom: 4px; }
   .modal-box .modal-sub { font-size: 12px; color: var(--ev-grey-muted); margin-bottom: 18px; }
   .modal-box .field-group { margin-bottom: 14px; }
+  .modal-box .modal-note { font-size: 11px; line-height: 1.4; color: var(--ev-grey-muted); font-style: italic; margin-top: 4px; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
   .btn-ghost { background: none; border: none; color: var(--ev-grey-muted); font-weight: 700; font-size: 13px; padding: 11px 16px; cursor: pointer; border-radius: 10px; }
   .btn-ghost:hover { background: var(--ev-grey-light); }
@@ -274,8 +275,9 @@
       { categoria: "JARABES",     nombre: "ENDULZANTE GRANADINA DRAC VALLEY 1L C/12" },
       { categoria: "JARABES",     nombre: "ENDULZANTE GRANADINA EL NACIONAL 1L C/12" },
       { categoria: "JARABES",     nombre: "ENDULZANTE NATURAL DRAC VALLEY 1L C/12" },
-      { categoria: "JARABES",     nombre: "ENDULZANTE NATURAL DRAC VALLEY 5 LT" },
       { categoria: "JARABES",     nombre: "ENDULZANTE NATURAL DRAC VALLEY 5L C/4" },
+      { categoria: "JARABES",     nombre: "ENDULZANTE NATURAL EL NACIONAL 1L C/12" },
+      { categoria: "JARABES",     nombre: "ENDULZANTE NATURAL EL NACIONAL 5L C/4" },
       { categoria: "SALSAS",      nombre: "JUGO SAZONADOR EVENA FOODS 1L C/12" },
       { categoria: "SALSAS",      nombre: "JUGO SAZONADOR EVENA FOODS 500ML C/12" },
       { categoria: "LIMON DESH",  nombre: "LIMON DESHIDRATADO EVENA FOODS 750 GR C/25" },
@@ -680,12 +682,12 @@
 
     /* ───── ESTADO ───── */
     // Pedido de prueba — pulsa "Limpiar" para vaciarlo
-    var PEDIDO_DEMO = [
-      { categoria: "ADEREZOS", nombre: "ADEREZO RANCH EVENA FOODS 3.8L C/4", cantidad: 5 },
+     var PEDIDO_DEMO = [
+     /* { categoria: "ADEREZOS", nombre: "ADEREZO RANCH EVENA FOODS 3.8L C/4", cantidad: 5 },
       { categoria: "SALSAS",   nombre: "BLACKMIX EVENA FOODS 1L C/12", cantidad: 20 },
       { categoria: "SALSAS",   nombre: "BLACKMIX EVENA FOODS 3.8L C/4", cantidad: 20 },
       { categoria: "JARABES",  nombre: "ENDULZANTE GRANADINA DRAC VALLEY 1L C/12", cantidad: 15 },
-      { categoria: "JARABES",  nombre: "ENDULZANTE NATURAL DRAC VALLEY 5 LT", cantidad: 7 },
+      { categoria: "JARABES",  nombre: "ENDULZANTE NATURAL DRAC VALLEY 5L C/4", cantidad: 7 },
       { categoria: "JARABES",  nombre: "ENDULZANTE NATURAL DRAC VALLEY 1L C/12", cantidad: 32 },
       { categoria: "LIMON DESH", nombre: "LIMON DESHIDRATADO EVENA FOODS 750 GR C/25", cantidad: 3 },
       { categoria: "PULPAS",   nombre: "PULPA FRESA T/A DRAC VALLEY 1L C/12", cantidad: 15 },
@@ -701,7 +703,7 @@
       { categoria: "SALSAS",   nombre: "BLACKMIX EVENA FOODS 500ML C/12", cantidad: 2 },
       { categoria: "PULPAS",   nombre: "PULPA FRUTOS ROJOS T/A DRAC VALLEY 500ML C/12", cantidad: 5 },
       { categoria: "SALSAS",   nombre: "SALSA BBQ HABANERO EVENA FOODS 500ML C/12", cantidad: 5 },
-      { categoria: "SALSAS",   nombre: "SALSA BLACK DEMON EVENA FOODS 500ML C/12", cantidad: 5 }
+      { categoria: "SALSAS",   nombre: "SALSA BLACK DEMON EVENA FOODS 500ML C/12", cantidad: 5 }*/
     ];
 
     var state = {
@@ -1307,6 +1309,7 @@
       html += '      <label class="label">Razón social</label>';
       html += '      <input class="input" id="input-contacto-razon" type="text" placeholder="Ej. Comercializadora XYZ S.A. de C.V." value="' + esc(state.contactoRazonSocial) + '" />';
       html += '    </div>';
+      html += '    <p class="modal-note">Nos reservamos el derecho de apegarnos a la política de ventas para el envío de su pedido.</p>';
       html += '    <div class="modal-actions">';
       html += '      <button id="btn-modal-cancelar" class="btn-ghost">Cancelar</button>';
       html += '      <button id="btn-modal-generar" class="btn btn-primary"' + (puedeGenerar ? '' : ' disabled') + '>Generar PDF</button>';
